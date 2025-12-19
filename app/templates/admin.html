@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h2>Admin Queue</h2>
+  <p>Welcome, {{ admin_email }}. Your job: turn chaos into culture.</p>
+  <div class="badge-row">
+    <span class="badge alt">Moderator mode</span>
+    <span class="badge">No pressure</span>
+  </div>
+</section>
+
+<section class="grid">
+  {% if quotes %}
+    {% for q in quotes %}
+      <article class="card">
+        <p class="quote">{{ q.content }}</p>
+        <div class="quote-meta">
+          <span class="pill hot">PENDING</span>
+          {% if q.source %}<span class="pill">src: {{ q.source }}</span>{% endif %}
+        </div>
+        <div class="actions">
+          <form method="post" action="/api/admin/quotes/{{ q.id }}/approve">
+            <button class="btn primary" type="submit">Approve</button>
+          </form>
+          <form method="post" action="/api/admin/quotes/{{ q.id }}/reject">
+            <button class="btn danger" type="submit">Reject</button>
+          </form>
+        </div>
+      </article>
+    {% endfor %}
+  {% else %}
+    <div class="card">
+      <h3>Queue cleared</h3>
+      <p class="hint">No pending quotes. Either you’re efficient, or nobody is submitting. Both are suspicious.</p>
+      <div class="actions">
+        <a class="btn alt" href="/">Back to home</a>
+        <a class="btn primary" href="/submit">Add a quote</a>
+      </div>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

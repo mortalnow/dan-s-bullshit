@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h2>Submitted</h2>
+  <p>Your quote is now in the queue, doing push-ups until it’s strong enough to be approved.</p>
+  <div class="actions">
+    <a class="btn alt" href="/">See approved quotes</a>
+    <a class="btn primary" href="/submit">Submit another</a>
+  </div>
+</section>
+
+<section class="grid">
+  <article class="card">
+    <p class="quote">{{ quote.content }}</p>
+    <div class="quote-meta">
+      <span class="pill hot">PENDING</span>
+      {% if quote.source %}<span class="pill">src: {{ quote.source }}</span>{% endif %}
+    </div>
+  </article>
+</section>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero hero-slam">
+  <div class="hero-content">
+    <h2>Dan Quote Dispenser</h2>
+    <p>One random quote at a time.</p>
+    <div class="actions">
+      <a class="btn primary" href="/">Shuffle</a>
+      <a class="btn alt" href="/submit">SUBMIT NEW</a>
+    </div>
+  </div>
+  <div class="hero-image">
+    <img src="/static/images/hero-image-2.png" alt="Dan's Bullshit">
+  </div>
+</section>
+
+<section class="grid two">
+  <article class="poster">
+    <header class="poster-head">
+      <div class="stamp">CERTIFIED</div>
+    </header>
+
+    {% if quote %}
+    <blockquote class="quote-big">"{{ quote.content }}"</blockquote>
+    {% else %}
+    <div class="empty">
+      <h3>No approved quotes yet</h3>
+      <p class="hint">For local demo: run <code>uv run python scripts/import_records.py</code> then refresh.</p>
+    </div>
+    {% endif %}
+  </article>
+
+  <aside class="card sidebar">
+    <h3>HOW TO PLAY</h3>
+    <ul class="list">
+      <li><strong>Shuffle:</strong> click "Shuffle" until you laugh.</li>
+      <li><strong>Submit:</strong> new quotes land as <span class="pill hot">PENDING</span>.</li>
+      <li style="font-size: 14px; white-space: nowrap;"><strong>Approve:</strong> open <a class="btn topbar-admin"
+          href="/admin"
+          style="font-size: 12px; white-space: nowrap; display: inline-block; padding: 6px 10px;">ADMIN</a> and accept
+        your
+        destiny.</li>
+    </ul>
+    <div class="note">
+      <div class="note-title">Local mode</div>
+    </div>
+  </aside>
+</section>
+{% endblock %}

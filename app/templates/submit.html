@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h2>Submit a Quote</h2>
+  <p>Drop a quote into the queue. If it’s good, it lives forever. If it’s not, it still lived, briefly.</p>
+</section>
+
+<section class="grid two">
+  <div class="card">
+    <h3>Guidelines</h3>
+    <p class="hint">Keep it short-ish, keep it readable, keep it quotable.</p>
+    <div class="badge-row">
+      <span class="badge">No spam</span>
+      <span class="badge alt">No essays</span>
+      <span class="badge">Yes vibes</span>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Your quote</h3>
+    <form method="post" action="/submit" class="form">
+      <label for="content">Quote</label>
+      <textarea id="content" name="content" rows="5" required></textarea>
+      <button class="btn primary" type="submit">Send to moderation</button>
+      <p class="hint">It will be marked <span class="pill hot">PENDING</span> until approved.</p>
+    </form>
+  </div>
+</section>
+{% endblock %}

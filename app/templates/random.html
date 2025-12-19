@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h2>Random Quote</h2>
+  <p>Science says this is random. Dan says it’s destiny.</p>
+  <div class="actions">
+    <a class="btn primary" href="/random">Another one</a>
+    <a class="btn alt" href="/">Back to the wall</a>
+  </div>
+</section>
+
+<section class="grid">
+  {% if quote %}
+    <article class="card">
+      <p class="quote">{{ quote.content }}</p>
+      <div class="quote-meta">
+        <span class="pill violet">APPROVED</span>
+        {% if quote.source %}<span class="pill">src: {{ quote.source }}</span>{% endif %}
+      </div>
+    </article>
+  {% else %}
+    <div class="card">
+      <h3>No quotes yet</h3>
+      <p class="hint">Add fuel to the machine: <a href="/submit">submit one</a>.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

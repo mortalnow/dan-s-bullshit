@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+{% if local_mode %}
+  <section class="hero">
+    <h2>Admin Login</h2>
+    <p>Local demo mode. Enter the admin password and assume your responsibilities.</p>
+  </section>
+{% else %}
+  <section class="hero">
+    <h2>Admin Login</h2>
+    <p>Paste a bearer token. If the JWT says you’re an admin, we’ll pretend we’re surprised.</p>
+  </section>
+{% endif %}
+
+<section class="grid">
+  <div class="card">
+    <h3>Credentials</h3>
+    <form method="post" action="/admin/login" class="form">
+      {% if local_mode %}
+        <label for="token">Admin password</label>
+        <input id="token" name="token" type="password" required />
+      {% else %}
+        <label for="token">Bearer token (InstantDB JWT)</label>
+        <textarea id="token" name="token" rows="4" required></textarea>
+      {% endif %}
+      <button class="btn primary" type="submit">Enter</button>
+      <p class="hint">Stored in an HttpOnly cookie. Not glamorous, but effective.</p>
+    </form>
+  </div>
+  <div class="card">
+    <h3>What happens next?</h3>
+    <p class="hint">You’ll land in the moderation queue and start approving and rejecting quotes like a tiny, stylish bureaucracy.</p>
+    <div class="actions">
+      <a class="btn alt" href="/">Back to home</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
