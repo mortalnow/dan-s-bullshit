@@ -9,18 +9,17 @@ A FastAPI-based quote submission and moderation system with a minimal web UI. Us
 - **Random Quote Display**: Web interface showing random approved quotes
 - **REST API**: JSON API endpoints for programmatic access
 - **Dual Database Support**: 
-  - **InstantDB** (cloud) - Production mode
+  - **MongoDB Atlas** (cloud) - Production mode
   - **SQLite** (local) - Development/demo mode
-- **Authentication**: JWT-based admin authentication (InstantDB) or password-based (local mode)
+- **Authentication**: JWT-based admin authentication (JWKS) or password-based (local mode)
 - **Duplicate Detection**: Content hashing prevents duplicate quote submissions
 
 ## Tech Stack
 
 - **Framework**: FastAPI
 - **Templates**: Jinja2
-- **Database**: InstantDB (cloud) or SQLite (local)
+- **Database**: MongoDB Atlas (cloud) or SQLite (local)
 - **Authentication**: PyJWT with JWKS verification
-- **HTTP Client**: httpx
 
 ## Project Structure
 
@@ -31,8 +30,8 @@ A FastAPI-based quote submission and moderation system with a minimal web UI. Us
 │   ├── main.py              # FastAPI application and routes
 │   ├── models.py            # Pydantic models for quotes
 │   ├── auth.py              # Authentication and admin context
-│   ├── instantdb.py         # InstantDB client implementation
-│   ├── localdb.py            # SQLite database implementation
+│   ├── mongostore.py        # MongoDB (Motor) client implementation
+│   ├── localdb.py           # SQLite database implementation
 │   ├── templates/           # Jinja2 HTML templates
 │   └── static/              # CSS and images
 ├── scripts/
@@ -79,14 +78,15 @@ pip install -r requirements.txt
 
 Create a `.env` file in the project root:
 
-#### InstantDB Mode (Production)
+#### MongoDB Atlas Mode (Production)
 
 ```env
-INSTANTDB_APP_ID=your_app_id
-INSTANTDB_API_KEY=your_server_key
-INSTANTDB_BASE_URL=https://api.instantdb.com
-INSTANTDB_QUOTES_PATH=/v1/apps/{app_id}/collections/quotes
-INSTANTDB_JWKS_URL=https://your-jwks-url
+# Mongo
+MONGODB_URI=mongodb+srv://user:pass@cluster.example.mongodb.net/?retryWrites=true&w=majority
+MONGODB_DB=dans-bullshit
+MONGODB_COLLECTION=quotes
+# Auth (JWT)
+INSTANTDB_JWKS_URL=https://your-jwks-url   # or INSTANTDB_TOKEN_VERIFY_URL
 ADMIN_EMAILS=you@example.com,other@example.com
 ```
 
@@ -125,9 +125,9 @@ uv run uvicorn app.main:app --reload
    - **Submit Form**: `http://localhost:8000/submit`
    - **Admin Panel**: `http://localhost:8000/admin/login` (use `ADMIN_PASSWORD`)
 
-### InstantDB Mode (Production)
+### MongoDB Atlas Mode (Production)
 
-1. Configure environment variables (see above)
+1. Configure environment variables (see above). You can set them in `.env` or export in the shell.
 
 2. (Optional) Import initial quotes:
 ```bash
@@ -152,13 +152,12 @@ uv run uvicorn app.main:app --reload
 - Login via `/admin/login` form
 - Token stored in HTTP-only cookie
 
-### InstantDB Mode
+### JWT Mode (Production/Mongo)
 
-- Admin authentication uses JWT tokens from InstantDB
-- JWT is verified against `INSTANTDB_JWKS_URL` (or `INSTANTDB_TOKEN_VERIFY_URL`)
+- Admin authentication uses JWT tokens verified via `INSTANTDB_JWKS_URL` (or `INSTANTDB_TOKEN_VERIFY_URL`)
 - Admin allowlist comes from `ADMIN_EMAILS` (comma-separated)
 - JWT must contain an `email` claim matching an admin email
-- Send `Authorization: Bearer <instantdb_jwt>` header on admin routes
+- Send `Authorization: Bearer <jwt>` header on admin routes
 - Or use cookie-based auth via `/admin/login` endpoint
 
 ## API Endpoints
@@ -201,7 +200,7 @@ This script:
 - Parses numbered quotes from `records.txt`
 - Computes content hashes to prevent duplicates
 - Inserts quotes as `APPROVED` with `source=records.txt`
-- Works in both local and InstantDB modes
+- Works in both local (SQLite) and MongoDB modes
 
 ## Quote Status Flow
 
@@ -211,9 +210,9 @@ This script:
 
 ## Database Abstraction
 
-The application uses a database abstraction layer that supports both InstantDB and SQLite:
+The application uses a database abstraction layer that supports MongoDB Atlas (production) and SQLite (local):
 
-- **InstantDBClient** (`app/instantdb.py`): HTTP client for InstantDB API
+- **MongoQuoteStore** (`app/mongostore.py`): MongoDB/Motor implementation with indexes on `content_hash` (unique) and `status`
 - **LocalQuoteStore** (`app/localdb.py`): SQLite implementation
 
 Both implement the same interface:
@@ -223,6 +222,10 @@ Both implement the same interface:
 - `update_status()` - Update quote status (approve/reject)
 - `random_approved()` - Get random approved quote
 - `content_hash()` - Compute content hash for deduplication
+
+## Rendering Notes
+
+- Stored quotes may include leading/trailing quotes; the UI strips only one outer pair (Chinese or ASCII) while preserving any inner quotes.
 
 ## Development
 
@@ -235,15 +238,7 @@ The project uses `pyproject.toml` for configuration. Dependencies are managed vi
 - **Models** (`app/models.py`): Pydantic models for request/response validation
 - **Main** (`app/main.py`): FastAPI app, routes, and request handling
 - **Auth** (`app/auth.py`): JWT verification and admin context management
-- **Database Clients**: Separate implementations for InstantDB and SQLite
-
-### Customizing InstantDB API Paths
-
-The InstantDB client is path-configurable via environment variables:
-- `INSTANTDB_BASE_URL`: Base URL for InstantDB API
-- `INSTANTDB_QUOTES_PATH`: Path template for quotes collection
-
-If your InstantDB API paths differ, adjust these environment values accordingly.
+- **Database Clients**: Separate implementations for MongoDB (production) and SQLite (local)
 
 ## License
 

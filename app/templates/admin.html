@@ -13,7 +13,7 @@
   {% if quotes %}
     {% for q in quotes %}
       <article class="card">
-        <p class="quote">{{ q.content }}</p>
+        <p class="quote">{{ q.content|strip_outer_quotes }}</p>
         <div class="quote-meta">
           <span class="pill hot">PENDING</span>
           {% if q.source %}<span class="pill">src: {{ q.source }}</span>{% endif %}

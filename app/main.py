@@ -2,27 +2,28 @@ import os
 from functools import lru_cache
 from typing import Optional
 
-import httpx
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 
 from .auth import AdminContext, get_current_admin, provide_auth_settings, verify_token
-from .instantdb import InstantDBClient, InstantDBConfig, InstantDBError
 from .localdb import LocalDBError, LocalDBConfig, LocalQuoteStore
+from .mongostore import MongoConfig, MongoDBError, MongoQuoteStore
 from .models import QuoteCreate, QuoteListResponse, QuoteResponse
+
+QuoteStore = MongoQuoteStore | LocalQuoteStore
 
 
 class Settings(BaseModel):
     local_mode: bool = Field(default=False, alias="LOCAL_MODE")
     local_db_path: str = Field(default="local.db", alias="LOCAL_DB_PATH")
-    instantdb_app_id: Optional[str] = Field(default=None, alias="INSTANTDB_APP_ID")
-    instantdb_api_key: Optional[str] = Field(default=None, alias="INSTANTDB_API_KEY")
-    instantdb_base_url: str = Field(default="https://api.instantdb.com", alias="INSTANTDB_BASE_URL")
-    instantdb_quotes_path: str = Field(default="/v1/apps/{app_id}/collections/quotes", alias="INSTANTDB_QUOTES_PATH")
+    mongodb_uri: Optional[str] = Field(default=None, alias="MONGODB_URI")
+    mongodb_db: str = Field(default="dans-bullshit", alias="MONGODB_DB")
+    mongodb_collection: str = Field(default="quotes", alias="MONGODB_COLLECTION")
     instantdb_jwks_url: Optional[str] = Field(default=None, alias="INSTANTDB_JWKS_URL")
     instantdb_token_verify_url: Optional[str] = Field(default=None, alias="INSTANTDB_TOKEN_VERIFY_URL")
     admin_emails_raw: str = Field(default="", alias="ADMIN_EMAILS")
@@ -45,27 +46,28 @@ def get_settings() -> Settings:
 async def lifespan(app: FastAPI):
     settings = get_settings()
     if settings.local_mode:
-        app.state.http = None
         app.state.db_client = LocalQuoteStore(LocalDBConfig(path=settings.local_db_path))
         yield
         return
 
-    if not settings.instantdb_app_id or not settings.instantdb_api_key:
-        raise RuntimeError("Set INSTANTDB_APP_ID and INSTANTDB_API_KEY, or enable LOCAL_MODE=1.")
+    if not settings.mongodb_uri:
+        raise RuntimeError("Set MONGODB_URI for production (MongoDB Atlas), or enable LOCAL_MODE=1.")
 
-    http_client = httpx.AsyncClient()
+    mongo_client = AsyncIOMotorClient(settings.mongodb_uri)
     try:
-        cfg = InstantDBConfig(
-            app_id=settings.instantdb_app_id,
-            api_key=settings.instantdb_api_key,
-            base_url=settings.instantdb_base_url,
-            quotes_path=settings.instantdb_quotes_path,
+        store = MongoQuoteStore(
+            MongoConfig(
+                uri=settings.mongodb_uri,
+                db=settings.mongodb_db,
+                collection=settings.mongodb_collection,
+            ),
+            mongo_client,
         )
-        app.state.http = http_client
-        app.state.db_client = InstantDBClient(cfg, http_client)
+        await store.ensure_indexes()
+        app.state.db_client = store
         yield
     finally:
-        await http_client.aclose()
+        mongo_client.close()
 
 
 app = FastAPI(title="Dan Quotes Service", lifespan=lifespan)
@@ -77,7 +79,22 @@ if not os.path.exists(static_dir):
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
-def get_db_client(request: Request) -> object:
+def strip_outer_quotes(value: object) -> object:
+    """Remove one pair of outer quotes (ASCII or Chinese) if both ends match."""
+    if not isinstance(value, str):
+        return value
+    s = value.strip()
+    pairs = [("“", "”"), ('"', '"'), ("'", "'")]
+    for left, right in pairs:
+        if s.startswith(left) and s.endswith(right) and len(s) >= len(left) + len(right):
+            return s[len(left) : -len(right)]
+    return s
+
+
+templates.env.filters["strip_outer_quotes"] = strip_outer_quotes
+
+
+def get_db_client(request: Request) -> QuoteStore:
     return request.app.state.db_client
 
 
@@ -88,10 +105,10 @@ def handle_db_error(exc: Exception):
 
 # Web routes ----------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request, db: InstantDBClient = Depends(get_db_client)):
+async def home(request: Request, db: QuoteStore = Depends(get_db_client)):
     try:
         quote = await db.random_approved()
-    except (InstantDBError, LocalDBError) as exc:
+    except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
     return templates.TemplateResponse("index.html", {"request": request, "quote": quote})
 
@@ -111,7 +128,7 @@ async def submit_quote_form(
     request: Request,
     content: str = Form(...),
     source: str = Form("web_form"),
-    db: InstantDBClient = Depends(get_db_client),
+    db: QuoteStore = Depends(get_db_client),
 ):
     content_clean = content.strip()
     if not content_clean:
@@ -124,7 +141,7 @@ async def submit_quote_form(
             status="PENDING",
             submitted_by=None,
         )
-    except (InstantDBError, LocalDBError) as exc:
+    except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
     return templates.TemplateResponse(
         "submit_success.html", {"request": request, "quote": quote}, status_code=status.HTTP_201_CREATED
@@ -134,7 +151,7 @@ async def submit_quote_form(
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_queue(
     request: Request,
-    db: InstantDBClient = Depends(get_db_client),
+    db: QuoteStore = Depends(get_db_client),
 ):
     settings = get_settings()
     authorization = request.headers.get("authorization")
@@ -170,7 +187,7 @@ async def admin_queue(
 
     try:
         quotes = await db.list_quotes(status="PENDING", limit=100)
-    except (InstantDBError, LocalDBError) as exc:
+    except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
     return templates.TemplateResponse(
         "admin.html",
@@ -197,28 +214,28 @@ async def api_list_quotes(
     status_param: str = Query(default="APPROVED", alias="status"),
     limit: int = 20,
     cursor: Optional[str] = None,
-    db: InstantDBClient = Depends(get_db_client),
+    db: QuoteStore = Depends(get_db_client),
 ):
     status_normalized = status_param.upper() if status_param else None
     try:
         return await db.list_quotes(status=status_normalized, limit=limit, cursor=cursor)
-    except (InstantDBError, LocalDBError) as exc:
+    except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
 
 
 @app.get("/api/quotes/random", response_model=Optional[QuoteResponse])
-async def api_random_quote(db: InstantDBClient = Depends(get_db_client)):
+async def api_random_quote(db: QuoteStore = Depends(get_db_client)):
     try:
         return await db.random_approved()
-    except (InstantDBError, LocalDBError) as exc:
+    except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
 
 
 @app.get("/api/quotes/{quote_id}", response_model=QuoteResponse)
-async def api_get_quote(quote_id: str, db: InstantDBClient = Depends(get_db_client)):
+async def api_get_quote(quote_id: str, db: QuoteStore = Depends(get_db_client)):
     try:
         quote = await db.get_quote(quote_id)
-    except (InstantDBError, LocalDBError) as exc:
+    except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
     if not quote or quote.status != "APPROVED":
         raise HTTPException(status_code=404, detail="Quote not found")
@@ -228,7 +245,7 @@ async def api_get_quote(quote_id: str, db: InstantDBClient = Depends(get_db_clie
 @app.post("/api/quotes", response_model=QuoteResponse, status_code=status.HTTP_201_CREATED)
 async def api_create_quote(
     body: QuoteCreate,
-    db: InstantDBClient = Depends(get_db_client),
+    db: QuoteStore = Depends(get_db_client),
 ):
     content_clean = body.content.strip()
     try:
@@ -239,7 +256,7 @@ async def api_create_quote(
             status="PENDING",
             submitted_by=body.submitted_by,
         )
-    except (InstantDBError, LocalDBError) as exc:
+    except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
 
 
@@ -250,12 +267,12 @@ async def api_admin_list_quotes(
     limit: int = 50,
     cursor: Optional[str] = None,
     admin: AdminContext = Depends(get_current_admin),
-    db: InstantDBClient = Depends(get_db_client),
+    db: QuoteStore = Depends(get_db_client),
 ):
     status_normalized = status_param.upper() if status_param else None
     try:
         return await db.list_quotes(status=status_normalized, limit=limit, cursor=cursor)
-    except (InstantDBError, LocalDBError) as exc:
+    except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
 
 
@@ -263,11 +280,11 @@ async def api_admin_list_quotes(
 async def api_admin_approve(
     quote_id: str,
     admin: AdminContext = Depends(get_current_admin),
-    db: InstantDBClient = Depends(get_db_client),
+    db: QuoteStore = Depends(get_db_client),
 ):
     try:
         return await db.update_status(quote_id, status="APPROVED", verified_by=admin.email)
-    except (InstantDBError, LocalDBError) as exc:
+    except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
 
 
@@ -275,9 +292,9 @@ async def api_admin_approve(
 async def api_admin_reject(
     quote_id: str,
     admin: AdminContext = Depends(get_current_admin),
-    db: InstantDBClient = Depends(get_db_client),
+    db: QuoteStore = Depends(get_db_client),
 ):
     try:
         return await db.update_status(quote_id, status="REJECTED", verified_by=admin.email)
-    except (InstantDBError, LocalDBError) as exc:
+    except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)

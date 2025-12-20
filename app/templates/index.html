@@ -21,7 +21,7 @@
     </header>
 
     {% if quote %}
-    <blockquote class="quote-big">"{{ quote.content }}"</blockquote>
+    <blockquote class="quote-big">"{{ quote.content|strip_outer_quotes }}"</blockquote>
     {% else %}
     <div class="empty">
       <h3>No approved quotes yet</h3>

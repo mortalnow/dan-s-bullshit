@@ -1,5 +1,5 @@
 """
-Seed InstantDB with the initial quotes from records.txt.
+Seed MongoDB Atlas (or local SQLite) with the initial quotes from records.txt.
 """
 
 import asyncio
@@ -8,16 +8,15 @@ import re
 import sys
 from pathlib import Path
 
-import httpx
 from dotenv import load_dotenv
+from motor.motor_asyncio import AsyncIOMotorClient
 
 ROOT = Path(__file__).resolve().parents[1]
-APP_DIR = ROOT / "app"
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from app.instantdb import InstantDBClient, InstantDBConfig, InstantDBError  # noqa: E402
 from app.localdb import LocalDBConfig, LocalDBError, LocalQuoteStore  # noqa: E402
+from app.mongostore import MongoConfig, MongoDBError, MongoQuoteStore  # noqa: E402
 
 
 def parse_quotes(text: str) -> list[str]:
@@ -45,11 +44,9 @@ async def main():
     local_raw = (os.getenv("LOCAL_MODE") or "").strip().lower()
     local_mode = local_raw in ("1", "true", "yes", "on")
     local_db_path = os.getenv("LOCAL_DB_PATH", "local.db")
-
-    app_id = os.getenv("INSTANTDB_APP_ID")
-    api_key = os.getenv("INSTANTDB_API_KEY")
-    base_url = os.getenv("INSTANTDB_BASE_URL", "https://api.instantdb.com")
-    quotes_path = os.getenv("INSTANTDB_QUOTES_PATH", "/v1/apps/{app_id}/collections/quotes")
+    mongodb_uri = os.getenv("MONGODB_URI")
+    mongodb_db = os.getenv("MONGODB_DB", "dans-bullshit")
+    mongodb_collection = os.getenv("MONGODB_COLLECTION", "quotes")
 
     raw_text = records_path.read_text(encoding="utf-8")
     quotes = parse_quotes(raw_text)
@@ -79,25 +76,29 @@ async def main():
                 print(f"Failed to insert quote: {exc}")
         return
 
-    if not app_id or not api_key:
-        print("Set INSTANTDB_APP_ID and INSTANTDB_API_KEY, or set LOCAL_MODE=1 for a fully-local demo.")
+    if not mongodb_uri:
+        print("Set MONGODB_URI for MongoDB Atlas (or set LOCAL_MODE=1 for local).")
         sys.exit(1)
 
-    cfg = InstantDBConfig(app_id=app_id, api_key=api_key, base_url=base_url, quotes_path=quotes_path)
-    async with httpx.AsyncClient() as http:
-        client = InstantDBClient(cfg, http)
+    mongo_client = AsyncIOMotorClient(mongodb_uri)
+    store = MongoQuoteStore(
+        MongoConfig(uri=mongodb_uri, db=mongodb_db, collection=mongodb_collection),
+        mongo_client,
+    )
+    await store.ensure_indexes()
+    try:
         for content in quotes:
-            content_hash = client.content_hash(content)
+            content_hash = store.content_hash(content)
             # skip duplicates by hash if already present
             try:
-                existing = await client.list_quotes(content_hash=content_hash, limit=1)
+                existing = await store.list_quotes(content_hash=content_hash, limit=1)
                 if existing.items:
                     print("Skip duplicate by hash")
                     continue
-            except InstantDBError as exc:
+            except MongoDBError as exc:
                 print(f"Lookup failed, attempting insert anyway: {exc}")
             try:
-                created = await client.create_quote(
+                created = await store.create_quote(
                     content=content,
                     content_hash=content_hash,
                     source="records.txt",
@@ -105,9 +106,11 @@ async def main():
                     submitted_by=None,
                 )
                 print(f"Inserted: {created.id}")
-            except InstantDBError as exc:
+            except MongoDBError as exc:
                 print(f"Failed to insert quote: {exc}")
                 continue
+    finally:
+        mongo_client.close()
 
 
 if __name__ == "__main__":
