@@ -39,8 +39,6 @@ class Settings(BaseModel):
 def get_settings() -> Settings:
     dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env")
     load_dotenv(dotenv_path=dotenv_path, override=False)
-    demo_dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".env.demo")
-    load_dotenv(dotenv_path=demo_dotenv_path, override=True)
     return Settings(**os.environ)
 
 

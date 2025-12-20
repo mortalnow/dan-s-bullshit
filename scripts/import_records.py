@@ -41,7 +41,6 @@ async def main():
         sys.exit(1)
 
     load_dotenv(dotenv_path=ROOT / ".env", override=False)
-    load_dotenv(dotenv_path=ROOT / ".env.demo", override=True)
 
     local_raw = (os.getenv("LOCAL_MODE") or "").strip().lower()
     local_mode = local_raw in ("1", "true", "yes", "on")
