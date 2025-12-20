@@ -199,3 +199,30 @@ class LocalQuoteStore:
                 return self._row_to_quote(row)
         except sqlite3.Error as exc:
             raise LocalDBError(str(exc)) from exc
+
+    async def latest_quote(self, status: Optional[QuoteStatus] = None) -> Optional[QuoteResponse]:
+        try:
+            with self._connect() as conn:
+                if status:
+                    row = conn.execute(
+                        """
+                        SELECT * FROM quotes
+                        WHERE status = ?
+                        ORDER BY created_at DESC, id DESC
+                        LIMIT 1
+                        """,
+                        (status,),
+                    ).fetchone()
+                else:
+                    row = conn.execute(
+                        """
+                        SELECT * FROM quotes
+                        ORDER BY created_at DESC, id DESC
+                        LIMIT 1
+                        """
+                    ).fetchone()
+                if not row:
+                    return None
+                return self._row_to_quote(row)
+        except sqlite3.Error as exc:
+            raise LocalDBError(str(exc)) from exc

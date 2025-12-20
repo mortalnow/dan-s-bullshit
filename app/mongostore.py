@@ -169,3 +169,20 @@ class MongoQuoteStore:
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc
 
+    async def latest_quote(self, status: Optional[QuoteStatus] = None) -> Optional[QuoteResponse]:
+        query: dict = {}
+        if status:
+            query["status"] = status
+        try:
+            doc = (
+                await self._collection.find(query)
+                .sort([("created_at", -1), ("id", -1)])
+                .limit(1)
+                .to_list(length=1)
+            )
+            if not doc:
+                return None
+            return self._doc_to_quote(doc[0])
+        except PyMongoError as exc:
+            raise MongoDBError(str(exc)) from exc
+

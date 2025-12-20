@@ -242,6 +242,18 @@ async def api_get_quote(quote_id: str, db: QuoteStore = Depends(get_db_client)):
     return quote
 
 
+@app.get("/api/quotes/latest", response_model=Optional[QuoteResponse])
+async def api_latest_quote(
+    status_param: str = Query(default=None, alias="status"),
+    db: QuoteStore = Depends(get_db_client),
+):
+    status_normalized = status_param.upper() if status_param else None
+    try:
+        return await db.latest_quote(status=status_normalized)
+    except (MongoDBError, LocalDBError) as exc:
+        handle_db_error(exc)
+
+
 @app.post("/api/quotes", response_model=QuoteResponse, status_code=status.HTTP_201_CREATED)
 async def api_create_quote(
     body: QuoteCreate,

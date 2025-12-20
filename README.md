@@ -167,6 +167,7 @@ uv run uvicorn app.main:app --reload
 - `GET /api/quotes` - List quotes (default: APPROVED status)
   - Query params: `status`, `limit`, `cursor`
 - `GET /api/quotes/random` - Get a random approved quote
+- `GET /api/quotes/latest` - Get the most recently inserted quote (optionally filter by `status`)
 - `GET /api/quotes/{quote_id}` - Get a specific approved quote
 - `POST /api/quotes` - Submit a new quote (creates as PENDING)
   - Body: `{"content": "...", "source": "...", "submitted_by": "..."}`
