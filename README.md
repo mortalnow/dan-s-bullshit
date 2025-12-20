@@ -8,6 +8,7 @@ A FastAPI-based quote submission and moderation system with a minimal web UI. Us
 - **Moderation Queue**: Admin panel to review, approve, or reject pending quotes
 - **Random Quote Display**: Web interface showing random approved quotes
 - **REST API**: JSON API endpoints for programmatic access
+- **Mode Indicator**: UI explicitly displays whether it's running in **LOCAL** or **PROD** mode.
 - **Dual Database Support**: 
   - **MongoDB Atlas** (cloud) - Production mode
   - **SQLite** (local) - Development/demo mode

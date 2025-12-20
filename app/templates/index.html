@@ -42,7 +42,13 @@
         destiny.</li>
     </ul>
     <div class="note">
-      <div class="note-title">Local mode</div>
+      <div class="note-title">
+        {% if settings.local_mode %}
+          LOCAL MODE
+        {% else %}
+          PROD MODE
+        {% endif %}
+      </div>
     </div>
   </aside>
 </section>

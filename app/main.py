@@ -73,6 +73,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Dan Quotes Service", lifespan=lifespan)
 
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+templates.env.globals["settings"] = get_settings()
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if not os.path.exists(static_dir):
     os.makedirs(static_dir, exist_ok=True)
