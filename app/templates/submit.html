@@ -19,8 +19,12 @@
     <h3>Your quote</h3>
     <form method="post" action="/submit" class="form">
       <label for="content">Quote</label>
-      <textarea id="content" name="content" rows="5" required></textarea>
-      <button class="btn primary" type="submit">Send to moderation</button>
+      <textarea id="content" name="content" rows="5" required placeholder="What was said?"></textarea>
+      
+      <label for="submitted_by">Your Name / Handle</label>
+      <input type="text" id="submitted_by" name="submitted_by" value="{{ user.name }}" required placeholder="Who are you?">
+      
+      <button class="btn primary" type="submit" style="margin-top: 1.5rem;">Send to moderation</button>
       <p class="hint">It will be marked <span class="pill hot">PENDING</span> until approved.</p>
     </form>
   </div>

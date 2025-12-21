@@ -12,7 +12,7 @@
 <section class="grid">
   {% if quote %}
     <article class="card">
-      <p class="quote">{{ quote.content|strip_outer_quotes }}</p>
+      <p class="quote">{{ quote.content }}</p>
       <div class="quote-meta">
         <span class="pill violet">APPROVED</span>
         {% if quote.source %}<span class="pill">src: {{ quote.source }}</span>{% endif %}

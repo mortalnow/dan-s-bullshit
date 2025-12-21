@@ -167,6 +167,15 @@ a:hover {
   transform: translate(-2px, -2px);
 }
 
+.btn-join {
+  background: var(--paper) !important;
+}
+
+.btn-join:hover {
+  background: var(--acid) !important;
+  color: var(--ink) !important;
+}
+
 .nav {
   display: flex;
   flex-wrap: wrap;
@@ -352,6 +361,10 @@ main {
   color: #fff;
 }
 
+.pill.acid {
+  background: var(--acid);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -407,6 +420,7 @@ label {
 
 textarea,
 input[type="text"],
+input[type="email"],
 input[type="password"] {
   width: 100%;
   border: var(--border);
@@ -419,6 +433,7 @@ input[type="password"] {
 
 textarea:focus,
 input[type="text"]:focus,
+input[type="email"]:focus,
 input[type="password"]:focus {
   outline: none;
   background: var(--sun);
@@ -513,16 +528,11 @@ footer {
   min-height: 329px;
 }
 
-.poster::before {
-  content: "";
+.btn-poster-shuffle {
   position: absolute;
   top: -18px;
   right: 18px;
-  width: 58px;
-  height: 58px;
-  background: var(--acid);
-  border: var(--border);
-  box-shadow: var(--shadow-sm);
+  z-index: 2;
 }
 
 .poster-head {
@@ -636,4 +646,66 @@ footer {
     max-width: 200px;
     align-self: center;
   }
+}
+
+/* Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-content {
+  max-width: 400px;
+  width: 100%;
+  position: relative;
+  animation: modalSlide 0.2s ease-out;
+}
+
+@keyframes modalSlide {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  border-bottom: var(--border);
+  padding-bottom: 10px;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.btn-close {
+  background: transparent;
+  border: 0;
+  font-size: 28px;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.btn-close:hover {
+  color: var(--hot);
+}
+
+.donate-image {
+  width: 100%;
+  height: auto;
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
 }

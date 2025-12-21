@@ -12,10 +12,13 @@ ADMIN_PASSWORD_ENV = "ADMIN_PASSWORD"
 
 
 class AdminContext:
-    def __init__(self, email: str, token: str, claims: dict):
+    def __init__(self, email: str, token: str, claims: dict, name: Optional[str] = None, is_admin: bool = False, status: str = "APPROVED"):
         self.email = email
         self.token = token
         self.claims = claims
+        self.name = name or email.split("@")[0] if "@" in email else email
+        self.is_admin = is_admin
+        self.status = status
 
 
 class AuthSettings:
@@ -25,11 +28,13 @@ class AuthSettings:
         admin_emails: List[str],
         local_mode: bool,
         admin_password: Optional[str],
+        admin_name: str = "Qiao",
     ):
         self.jwks_url = jwks_url
         self.admin_emails = [e.strip().lower() for e in admin_emails if e.strip()]
         self.local_mode = local_mode
         self.admin_password = admin_password
+        self.admin_name = admin_name
 
 
 def build_auth_settings(env: dict) -> AuthSettings:
@@ -38,11 +43,13 @@ def build_auth_settings(env: dict) -> AuthSettings:
     local_raw = (env.get(LOCAL_MODE_ENV) or "").strip().lower()
     local_mode = local_raw in ("1", "true", "yes", "on")
     admin_password = env.get(ADMIN_PASSWORD_ENV)
+    admin_name = env.get("ADMIN_NAME", "Qiao")
     return AuthSettings(
         jwks_url=jwks_url,
         admin_emails=admin_emails,
         local_mode=local_mode,
         admin_password=admin_password,
+        admin_name=admin_name,
     )
 
 
@@ -54,33 +61,75 @@ def _jwks_client(jwks_url: str) -> PyJWKClient:
 async def verify_token(
     token: str,
     settings: AuthSettings,
+    db: Optional[object] = None,
 ) -> dict:
-    if settings.local_mode:
-        if not settings.admin_password:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="ADMIN_PASSWORD not configured for LOCAL_MODE.",
-            )
-        if token != settings.admin_password:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin password")
-        return {"email": "local-admin"}
+    # Handle role-suffixed tokens from main.py
+    role = "user"
+    original_token = token
+    if ":" in token:
+        parts = token.split(":")
+        if len(parts) == 3: # email:password:role
+            email, password, role = parts
+            token = password
+        elif len(parts) == 2 and parts[1] in ("admin", "user"): # password:role
+            token, role = parts
 
-    if not settings.jwks_url:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="JWKS URL not configured; set INSTANTDB_JWKS_URL or INSTANTDB_TOKEN_VERIFY_URL.",
-        )
-    try:
-        signing_key = _jwks_client(settings.jwks_url).get_signing_key_from_jwt(token)
-        claims = jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256", "ES256", "HS256"],
-            options={"verify_aud": False},
-        )
-        return claims
-    except jwt.PyJWTError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    if settings.local_mode or role == "admin":
+        # Build creds map from environment similar to main.py
+        creds = {}
+        creds_raw = os.getenv("ADMIN_CREDENTIALS", "")
+        if creds_raw:
+            for pair in creds_raw.split(","):
+                if ":" in pair:
+                    e, p = pair.split(":", 1)
+                    creds[e.strip().lower()] = p.strip()
+        
+        if not creds and settings.admin_password:
+            emails = settings.admin_emails
+            passwords = [p.strip() for p in settings.admin_password.split(",")]
+            if len(passwords) == len(emails):
+                for e, p in zip(emails, passwords):
+                    creds[e.lower()] = p
+            else:
+                p = passwords[0]
+                for e in emails:
+                    creds[e.lower()] = p
+
+        # Check if the token (password) matches any admin in .env
+        for email, password in creds.items():
+            if token == password:
+                return {"email": email, "name": settings.admin_name, "is_admin": True, "status": "APPROVED"}
+        
+        # Fallback for single password case if not already caught
+        if settings.admin_password and token == settings.admin_password:
+            email = settings.admin_emails[0] if settings.admin_emails else "local-admin"
+            return {"email": email, "name": settings.admin_name, "is_admin": True, "status": "APPROVED"}
+
+    # Database Check (handles both admins and users depending on role suffix)
+    if db and hasattr(db, "get_user_by_email"):
+        if ":" in original_token:
+            parts = original_token.split(":")
+            if len(parts) == 3:
+                email, password, role = parts
+                user = await db.get_user_by_email(email, is_admin=(role == "admin"))
+                if user and user.password == password:
+                    return {"email": user.email, "name": user.admin_name, "is_admin": user.is_admin, "status": user.status}
+
+    # Production Mode Logic (JWT)
+    if settings.jwks_url:
+        try:
+            signing_key = _jwks_client(settings.jwks_url).get_signing_key_from_jwt(original_token)
+            claims = jwt.decode(
+                original_token,
+                signing_key.key,
+                algorithms=["RS256", "ES256", "HS256"],
+                options={"verify_aud": False},
+            )
+            return claims
+        except jwt.PyJWTError:
+            pass
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing authentication")
 
 
 def provide_auth_settings() -> AuthSettings:
@@ -90,6 +139,7 @@ def provide_auth_settings() -> AuthSettings:
         "ADMIN_EMAILS": os.getenv("ADMIN_EMAILS", ""),
         "LOCAL_MODE": os.getenv("LOCAL_MODE", ""),
         "ADMIN_PASSWORD": os.getenv("ADMIN_PASSWORD"),
+        "ADMIN_NAME": os.getenv("ADMIN_NAME", "Qiao"),
     }
     return build_auth_settings(env)
 
@@ -98,6 +148,7 @@ async def get_current_admin(
     authorization: Optional[str] = Header(default=None, alias="Authorization"),
     admin_token: Optional[str] = Cookie(default=None, alias="admin_token"),
     settings: AuthSettings = Depends(provide_auth_settings),
+    db: Optional[object] = None,  # Can be passed by dependency in main.py
 ) -> AdminContext:
     token: Optional[str] = None
     if authorization and authorization.lower().startswith("bearer "):
@@ -107,17 +158,40 @@ async def get_current_admin(
 
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
-    claims = await verify_token(token, settings)
+    claims = await verify_token(token, settings, db=db)
     email = (claims.get("email") or "").lower()
+    name = claims.get("name")
+    is_admin = claims.get("is_admin", False)
+    user_status = claims.get("status", "PENDING")
 
-    if settings.local_mode:
-        return AdminContext(email=email or "local-admin", token=token, claims=claims)
-
-    if not settings.admin_emails:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="ADMIN_EMAILS not configured.",
-        )
-    if email not in settings.admin_emails:
+    if not is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an admin")
-    return AdminContext(email=email, token=token, claims=claims)
+
+    return AdminContext(email=email, token=token, claims=claims, name=name, is_admin=is_admin, status=user_status)
+
+
+async def get_current_user(
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+    admin_token: Optional[str] = Cookie(default=None, alias="admin_token"),
+    settings: AuthSettings = Depends(provide_auth_settings),
+    db: Optional[object] = None,
+) -> AdminContext:
+    token: Optional[str] = None
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1]
+    elif admin_token:
+        token = admin_token
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Login required")
+    
+    claims = await verify_token(token, settings, db=db)
+    email = (claims.get("email") or "").lower()
+    name = claims.get("name")
+    is_admin = claims.get("is_admin", False)
+    user_status = claims.get("status", "PENDING")
+
+    if user_status != "APPROVED" and not is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account pending approval")
+
+    return AdminContext(email=email, token=token, claims=claims, name=name, is_admin=is_admin, status=user_status)

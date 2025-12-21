@@ -69,7 +69,7 @@ async def main():
                     content_hash=content_hash,
                     source="records.txt",
                     status="APPROVED",
-                    submitted_by=None,
+                    submitted_by="System",
                 )
                 print(f"Inserted: {created.id}")
             except LocalDBError as exc:

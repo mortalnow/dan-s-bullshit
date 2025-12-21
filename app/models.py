@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -9,7 +10,7 @@ QuoteStatus = Literal["PENDING", "APPROVED", "REJECTED"]
 class QuoteBase(BaseModel):
     content: str = Field(..., min_length=1, max_length=2000)
     source: Optional[str] = None
-    submitted_by: Optional[str] = None
+    submitted_by: str = Field(..., min_length=1, max_length=100)
 
 
 class QuoteCreate(QuoteBase):
@@ -41,4 +42,23 @@ class QuoteListResponse(BaseModel):
 class SubmitResult(BaseModel):
     id: str
     status: QuoteStatus
+
+
+class UserStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+
+
+class User(BaseModel):
+    email: str
+    password: str
+    admin_name: str
+    status: UserStatus = UserStatus.PENDING
+    is_admin: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
 

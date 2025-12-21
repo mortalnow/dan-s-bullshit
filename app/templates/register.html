@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h2>Create Account</h2>
+  <p>Join the circle of wisdom. Your account will require admin approval before you can submit new quotes.</p>
+</section>
+
+<section class="grid">
+  <div class="card">
+    <h3>Registration - make sure you're a friend of Dan</h3>
+    <form method="post" action="/register" class="form">
+      <label for="name">Display Name</label>
+      <input id="name" name="name" type="text" placeholder="How should we call you?" required />
+      
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com" required />
+      
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required />
+      
+      <button class="btn primary" type="submit">Register</button>
+    </form>
+  </div>
+  <div class="card">
+    <h3>Already have an account?</h3>
+    <p class="hint">Log in to check your status or start contributing.</p>
+    <div class="actions">
+      <a class="btn alt" href="/admin/login">Log In</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+

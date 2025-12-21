@@ -1,42 +1,111 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="hero">
-  <h2>Admin Queue</h2>
-  <p>Welcome, {{ admin_email }}. Your job: turn chaos into culture.</p>
+  <h2>{% if is_admin %}Admin Dashboard{% else %}User Dashboard{% endif %}</h2>
+  <p><span style="display: block;">Welcome, {{ admin_name }} ({{ admin_email }}).</span><span
+      style="display: block;">Monitoring the pulse of the bullshit.</span></p>
   <div class="badge-row">
-    <span class="badge alt">Moderator mode</span>
-    <span class="badge">No pressure</span>
+    {% if is_admin %}
+      <a href="/admin?mode=archive" class="badge {% if mode == 'archive' %}alt{% endif %}" style="border-bottom: 0;">Full
+        Archive</a>
+      <a href="/admin?mode=moderation" class="badge {% if mode == 'moderation' %}alt{% endif %}"
+        style="border-bottom: 0;">Moderation Mode</a>
+      <a href="/admin?mode=users" class="badge {% if mode == 'users' %}alt{% endif %}" style="border-bottom: 0;">User
+        Moderation</a>
+    {% endif %}
+    <form method="post" action="/admin/logout" style="display: inline;">
+      <button type="submit" class="badge"
+        style="border-bottom: 0; cursor: pointer; background: var(--hot); color: #fff;">Logout</button>
+    </form>
   </div>
 </section>
 
 <section class="grid">
-  {% if quotes %}
-    {% for q in quotes %}
-      <article class="card">
-        <p class="quote">{{ q.content|strip_outer_quotes }}</p>
-        <div class="quote-meta">
-          <span class="pill hot">PENDING</span>
-          {% if q.source %}<span class="pill">src: {{ q.source }}</span>{% endif %}
-        </div>
-        <div class="actions">
-          <form method="post" action="/api/admin/quotes/{{ q.id }}/approve">
-            <button class="btn primary" type="submit">Approve</button>
-          </form>
-          <form method="post" action="/api/admin/quotes/{{ q.id }}/reject">
-            <button class="btn danger" type="submit">Reject</button>
-          </form>
-        </div>
-      </article>
-    {% endfor %}
-  {% else %}
+  {% if not is_admin %}
     <div class="card">
-      <h3>Queue cleared</h3>
-      <p class="hint">No pending quotes. Either you’re efficient, or nobody is submitting. Both are suspicious.</p>
-      <div class="actions">
-        <a class="btn alt" href="/">Back to home</a>
-        <a class="btn primary" href="/submit">Add a quote</a>
+      <h3>Welcome!</h3>
+      <p>Your account is approved. You can now <a href="/submit" class="pill acid">Submit new quotes</a> to the dispenser.</p>
+      <p class="hint" style="margin-top: 10px;">Only administrators can view the full moderation archive and user list.</p>
+    </div>
+  {% elif mode == 'users' %}
+  {% if users %}
+  {% for u in users %}
+  <article class="card">
+    <div class="user-info">
+      <strong>{{ u.admin_name }}</strong> ({{ u.email }})
+      <div class="quote-meta">
+        <span class="pill {% if u.status == 'PENDING' %}hot{% elif u.status == 'APPROVED' %}acid{% endif %}">{{ u.status
+          }}</span>
+        <span class="pill">Joined: {{ u.created_at|format_datetime }}</span>
+        {% if u.is_admin %}<span class="pill acid">ADMIN</span>{% endif %}
       </div>
     </div>
+    <div class="actions" style="margin-top: 15px;">
+      {% if u.status == 'PENDING' %}
+      <form method="post" action="/admin/users/{{ u.email }}/approve" style="display: inline;">
+        <button class="btn primary" type="submit">Approve</button>
+      </form>
+      <form method="post" action="/admin/users/{{ u.email }}/reject" style="display: inline;">
+        <button class="btn danger" type="submit">Delete (Reject)</button>
+      </form>
+      {% else %}
+      {% if not u.is_admin %}
+      <form method="post" action="/admin/users/{{ u.email }}/reject" style="display: inline;">
+        <button class="btn danger" type="submit">Delete User</button>
+      </form>
+      {% endif %}
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+  {% else %}
+  <div class="card">
+    <h3>No users found</h3>
+    <p class="hint">The user base is either non-existent or hiding.</p>
+  </div>
+  {% endif %}
+  {% else %}
+  {% if quotes %}
+  {% for q in quotes %}
+  <article class="card">
+    <form method="post" action="/admin/update/{{ q.id }}?mode={{ mode }}">
+      <textarea name="content" class="quote"
+        {% if not is_admin %}readonly{% endif %}
+        style="width: 100%; border: 0; background: transparent; font-family: inherit; font-size: inherit; font-weight: inherit; line-height: inherit; padding: 0; resize: vertical; margin-bottom: 10px;"
+        rows="2">{{ q.content }}</textarea>
+      <div class="quote-meta">
+        <span class="pill {% if q.status == 'PENDING' %}hot{% elif q.status == 'APPROVED' %}acid{% endif %}">{{ q.status
+          }}</span>
+        <span class="pill">by: 
+          {% if is_admin %}
+            <input name="submitted_by" value="{{ q.submitted_by }}"
+              style="border: 0; background: transparent; font-weight: inherit; font-family: inherit; color: inherit; width: 120px; padding: 0;" />
+          {% else %}
+            {{ q.submitted_by }}
+          {% endif %}
+        </span>
+        {% if q.created_at %}<span class="pill">at: {{ q.created_at|format_datetime }}</span>{% endif %}
+      </div>
+          <div class="actions">
+            {% if is_admin and loop.last %}
+              <button class="btn primary" type="submit" name="action" value="approve">Approve</button>
+              <button class="btn danger" type="submit" name="action" value="reject">Reject</button>
+              <button class="btn alt" type="submit" name="action" value="edit">Edit</button>
+            {% endif %}
+          </div>
+    </form>
+  </article>
+  {% endfor %}
+  {% else %}
+  <div class="card">
+    <h3>Queue cleared</h3>
+    <p class="hint">No pending quotes. Either you’re efficient, or nobody is submitting. Both are suspicious.</p>
+    <div class="actions">
+      <a class="btn alt" href="/">Back to home</a>
+      <a class="btn primary" href="/submit">Add a quote</a>
+    </div>
+  </div>
+  {% endif %}
   {% endif %}
 </section>
 {% endblock %}

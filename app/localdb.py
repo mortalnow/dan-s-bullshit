@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Optional
 
-from .models import QuoteListResponse, QuoteResponse, QuoteStatus
+from .models import QuoteListResponse, QuoteResponse, QuoteStatus, User, UserStatus
 
 
 @dataclass(frozen=True)
@@ -45,6 +45,19 @@ class LocalQuoteStore:
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_quotes_content_hash ON quotes(content_hash)")
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    email TEXT PRIMARY KEY,
+                    password TEXT NOT NULL,
+                    admin_name TEXT,
+                    status TEXT NOT NULL,
+                    is_admin INTEGER DEFAULT 0,
+                    created_at TEXT
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_users_status ON users(status)")
             conn.commit()
 
     @staticmethod
@@ -65,6 +78,87 @@ class LocalQuoteStore:
             verified_by=row["verified_by"],
         )
 
+    # User methods ------------------------------------------------
+    async def get_user_by_email(self, email: str, is_admin: bool = False) -> Optional[User]:
+        try:
+            with self._connect() as conn:
+                row = conn.execute("SELECT * FROM users WHERE email = ? LIMIT 1", (email.lower(),)).fetchone()
+                if not row:
+                    return None
+                return User(
+                    email=row["email"],
+                    password=row["password"],
+                    admin_name=row["admin_name"],
+                    status=row["status"],
+                    is_admin=bool(row["is_admin"]),
+                    created_at=datetime.fromisoformat(row["created_at"]),
+                )
+        except (sqlite3.Error, ValueError) as exc:
+            raise LocalDBError(str(exc)) from exc
+
+    async def create_user(self, user: User) -> User:
+        try:
+            with self._connect() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO users (email, password, admin_name, status, is_admin, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (user.email.lower(), user.password, user.admin_name, user.status, 1 if user.is_admin else 0, user.created_at.isoformat()),
+                )
+                conn.commit()
+                return user
+        except sqlite3.Error as exc:
+            raise LocalDBError(str(exc)) from exc
+
+    async def list_users(self, status: Optional[UserStatus] = None) -> list[User]:
+        query = "SELECT * FROM users"
+        params = []
+        if status:
+            query += " WHERE status = ?"
+            params.append(status)
+        query += " ORDER BY created_at DESC"
+        try:
+            with self._connect() as conn:
+                rows = conn.execute(query, params).fetchall()
+                return [User(
+                    email=r["email"],
+                    password=r["password"],
+                    admin_name=r["admin_name"],
+                    status=r["status"],
+                    is_admin=bool(r["is_admin"]),
+                    created_at=datetime.fromisoformat(r["created_at"]),
+                ) for r in rows]
+        except (sqlite3.Error, ValueError) as exc:
+            raise LocalDBError(str(exc)) from exc
+
+    async def update_user_status(self, email: str, status: UserStatus) -> bool:
+        try:
+            with self._connect() as conn:
+                updated = conn.execute(
+                    "UPDATE users SET status = ? WHERE email = ?",
+                    (status, email.lower()),
+                ).rowcount
+                conn.commit()
+                return updated > 0
+        except sqlite3.Error as exc:
+            raise LocalDBError(str(exc)) from exc
+
+    async def delete_user(self, email: str) -> bool:
+        try:
+            with self._connect() as conn:
+                deleted = conn.execute("DELETE FROM users WHERE email = ?", (email.lower(),)).rowcount
+                conn.commit()
+                return deleted > 0
+        except sqlite3.Error as exc:
+            raise LocalDBError(str(exc)) from exc
+
+    async def get_admin_by_email(self, email: str) -> Optional[User]:
+        user = await self.get_user_by_email(email)
+        if user and user.is_admin:
+            return user
+        return None
+
     # API-compatible methods --------------------------------------
     @staticmethod
     def content_hash(content: str) -> str:
@@ -78,7 +172,7 @@ class LocalQuoteStore:
         content_hash: str,
         source: Optional[str],
         status: QuoteStatus,
-        submitted_by: Optional[str],
+        submitted_by: str,
     ) -> QuoteResponse:
         try:
             with self._connect() as conn:
@@ -153,6 +247,55 @@ class LocalQuoteStore:
                 items = [self._row_to_quote(r) for r in rows]
                 next_cursor = str(offset + len(items)) if len(items) == limit else None
                 return QuoteListResponse(items=items, next_cursor=next_cursor)
+        except sqlite3.Error as exc:
+            raise LocalDBError(str(exc)) from exc
+
+    async def update_quote(
+        self,
+        quote_id: str,
+        content: Optional[str] = None,
+        status: Optional[QuoteStatus] = None,
+        submitted_by: Optional[str] = None,
+        verified_by: Optional[str] = None,
+    ) -> QuoteResponse:
+        verified_at = self._now_iso() if status in ("APPROVED", "REJECTED") else None
+        
+        update_fields = []
+        params = []
+        if content is not None:
+            update_fields.append("content = ?")
+            params.append(content)
+            update_fields.append("content_hash = ?")
+            params.append(self.content_hash(content))
+        if status is not None:
+            update_fields.append("status = ?")
+            params.append(status)
+            update_fields.append("verified_at = ?")
+            params.append(verified_at)
+        if submitted_by is not None:
+            update_fields.append("submitted_by = ?")
+            params.append(submitted_by)
+        if verified_by is not None:
+            update_fields.append("verified_by = ?")
+            params.append(verified_by)
+            
+        if not update_fields:
+            # Nothing to update
+            return await self.get_quote(quote_id)
+
+        params.append(quote_id)
+        sql = f"UPDATE quotes SET {', '.join(update_fields)} WHERE id = ?"
+        
+        try:
+            with self._connect() as conn:
+                updated = conn.execute(sql, tuple(params)).rowcount
+                if not updated:
+                    raise LocalDBError("Quote not found")
+                row = conn.execute("SELECT * FROM quotes WHERE id = ?", (quote_id,)).fetchone()
+                conn.commit()
+                if not row:
+                    raise LocalDBError("Quote not found")
+                return self._row_to_quote(row)
         except sqlite3.Error as exc:
             raise LocalDBError(str(exc)) from exc
 

@@ -5,8 +5,9 @@
     <h2>Dan Quote Dispenser</h2>
     <p>One random quote at a time.</p>
     <div class="actions">
-      <a class="btn primary" href="/">Shuffle</a>
       <a class="btn alt" href="/submit">SUBMIT NEW</a>
+      <button class="btn" id="openDonate"
+        style="background: #a5c0ff; color: var(--ink); font-family: inherit; font-size: inherit;">Donate</button>
     </div>
   </div>
   <div class="hero-image">
@@ -16,12 +17,13 @@
 
 <section class="grid two">
   <article class="poster">
+    <a class="btn primary btn-poster-shuffle" href="/">Shuffle</a>
     <header class="poster-head">
       <div class="stamp">CERTIFIED</div>
     </header>
 
     {% if quote %}
-    <blockquote class="quote-big">"{{ quote.content|strip_outer_quotes }}"</blockquote>
+    <blockquote class="quote-big">{{ quote.content }}</blockquote>
     {% else %}
     <div class="empty">
       <h3>No approved quotes yet</h3>
@@ -34,7 +36,8 @@
     <h3>HOW TO PLAY</h3>
     <ul class="list">
       <li><strong>Shuffle:</strong> click "Shuffle" until you laugh.</li>
-      <li><strong>Submit:</strong> new quotes land as <span class="pill hot">PENDING</span>.</li>
+      <li><strong>Register:</strong> <a href="/register">create an account</a> to join.</li>
+      <li><strong>Submit:</strong> once <span class="pill acid">APPROVED</span>, you can add quotes.</li>
       <li style="font-size: 14px; white-space: nowrap;"><strong>Approve:</strong> open <a class="btn topbar-admin"
           href="/admin"
           style="font-size: 12px; white-space: nowrap; display: inline-block; padding: 6px 10px;">ADMIN</a> and accept
@@ -44,12 +47,46 @@
     <div class="note">
       <div class="note-title">
         {% if settings.local_mode %}
-          LOCAL MODE
+        LOCAL MODE
         {% else %}
-          PROD MODE
+        PROD MODE
         {% endif %}
       </div>
     </div>
   </aside>
 </section>
+
+<!-- Donate Modal -->
+<div id="donateModal" class="modal">
+  <div class="modal-content card">
+    <div class="modal-header">
+      <h3>Support the Bullshit</h3>
+      <button class="btn-close" id="closeDonate">&times;</button>
+    </div>
+    <div class="modal-body">
+      <img src="/static/images/donate-qr.jpg" alt="Donate QR Code" class="donate-image">
+      <p class="hint">Your support keeps the dispenser running and the wisdom flowing.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById('donateModal');
+  const btn = document.getElementById('openDonate');
+  const span = document.getElementById('closeDonate');
+
+  btn.onclick = function () {
+    modal.style.display = 'flex';
+  }
+
+  span.onclick = function () {
+    modal.style.display = 'none';
+  }
+
+  window.onclick = function (event) {
+    if (event.target == modal) {
+      modal.style.display = 'none';
+    }
+  }
+</script>
 {% endblock %}

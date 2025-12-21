@@ -61,7 +61,7 @@ class InstantDBClient:
         content_hash: str,
         source: Optional[str],
         status: QuoteStatus,
-        submitted_by: Optional[str],
+        submitted_by: str,
     ) -> QuoteResponse:
         payload: Dict[str, Any] = {
             "content": content,
