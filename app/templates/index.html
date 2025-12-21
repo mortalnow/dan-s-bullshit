@@ -10,9 +10,12 @@
         style="background: #a5c0ff; color: var(--ink); font-family: inherit; font-size: inherit;">Donate</button>
     </div>
   </div>
-    <div class="hero-image">
-      <img id="heroImg" src="/static/images/hero-image-2.png" alt="Dan's Bullshit" style="cursor: pointer;">
-    </div>
+  <div class="hero-image" id="heroToggle"
+    style="position: relative; cursor: pointer; display: flex; justify-content: center; align-items: flex-end;">
+    <img src="/static/images/hero-image-2.png" alt="Dan's Bullshit">
+    <img id="boldOverlay" src="/static/images/bold_dan.png" alt="Dan's Bullshit"
+      style="position: absolute; display: none; z-index: 10; width: 100%; height: auto; max-height: 180px; object-fit: contain; bottom: -3px; left: -2px;">
+  </div>
 </section>
 
 <section class="grid two">
@@ -89,17 +92,15 @@
     }
   }
 
-  // Hero Image Toggle
-  const heroImg = document.getElementById('heroImg');
-  const img1 = '/static/images/hero-image-2.png';
-  const img2 = '/static/images/bold_dan.png';
+  // Hero Image Overlay Toggle
+  const heroToggle = document.getElementById('heroToggle');
+  const boldOverlay = document.getElementById('boldOverlay');
 
-  heroImg.onclick = function () {
-    const currentSrc = this.src;
-    if (currentSrc.indexOf('hero-image-2.png') !== -1) {
-      this.src = img2;
+  heroToggle.onclick = function () {
+    if (boldOverlay.style.display === 'none' || boldOverlay.style.display === '') {
+      boldOverlay.style.display = 'block';
     } else {
-      this.src = img1;
+      boldOverlay.style.display = 'none';
     }
   }
 </script>
