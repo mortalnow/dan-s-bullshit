@@ -73,6 +73,26 @@ a:hover {
   gap: 16px;
 }
 
+@media (max-width: 600px) {
+  .topbar-inner {
+    flex-direction: column;
+    padding: 15px;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .brand {
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .brand {
   display: flex;
   align-items: baseline;
@@ -225,9 +245,39 @@ main {
   box-shadow: var(--shadow);
   padding: 20px 20px 16px;
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
+}
+
+@media (max-width: 600px) {
+  .hero {
+    flex-direction: column;
+    text-align: center;
+    padding: 30px 20px;
+  }
+
+  .hero-content {
+    order: 1;
+  }
+
+  .hero-image {
+    display: none;
+  }
+  
+  .hero h2 {
+    font-size: 32px;
+    white-space: normal;
+  }
+  
+  .hero p {
+    margin: 0 auto;
+  }
+
+  .actions {
+    justify-content: center;
+  }
 }
 
 .hero-content {
@@ -304,6 +354,12 @@ main {
   display: grid;
   gap: 14px;
   margin-top: 16px;
+}
+
+@media (max-width: 820px) {
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 @media (min-width: 820px) {
@@ -384,6 +440,13 @@ main {
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: transform 0.06s linear;
+}
+
+@media (max-width: 600px) {
+  .btn {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
 }
 
 .btn:hover {
@@ -535,6 +598,15 @@ footer {
   z-index: 2;
 }
 
+@media (max-width: 600px) {
+  .btn-poster-shuffle {
+    top: -10px;
+    right: 10px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
+
 .poster-head {
   display: flex;
   align-items: center;
@@ -666,7 +738,7 @@ footer {
 
 .modal-content {
   max-width: 400px;
-  width: 100%;
+  width: 90%;
   position: relative;
   animation: modalSlide 0.2s ease-out;
 }

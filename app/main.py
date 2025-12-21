@@ -182,8 +182,24 @@ async def random_quote_page():
 @app.get("/submit", response_class=HTMLResponse)
 async def submit_form(
     request: Request,
-    user: AdminContext = Depends(get_current_user)
+    db: QuoteStore = Depends(get_db_client),
 ):
+    admin_token = request.cookies.get("admin_token")
+    if not admin_token:
+        return RedirectResponse(url="/admin/login", status_code=status.HTTP_302_FOUND)
+
+    try:
+        # Manually invoke the dependency logic to handle redirection
+        user = await get_current_user(
+            admin_token=admin_token,
+            settings=provide_auth_settings(),
+            db=db
+        )
+    except HTTPException as exc:
+        if exc.status_code in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN):
+            return RedirectResponse(url="/admin/login", status_code=status.HTTP_302_FOUND)
+        raise
+
     return templates.TemplateResponse("submit.html", {"request": request, "user": user})
 
 

@@ -10,9 +10,9 @@
         style="background: #a5c0ff; color: var(--ink); font-family: inherit; font-size: inherit;">Donate</button>
     </div>
   </div>
-  <div class="hero-image">
-    <img src="/static/images/hero-image-2.png" alt="Dan's Bullshit">
-  </div>
+    <div class="hero-image">
+      <img id="heroImg" src="/static/images/hero-image-2.png" alt="Dan's Bullshit" style="cursor: pointer;">
+    </div>
 </section>
 
 <section class="grid two">
@@ -86,6 +86,20 @@
   window.onclick = function (event) {
     if (event.target == modal) {
       modal.style.display = 'none';
+    }
+  }
+
+  // Hero Image Toggle
+  const heroImg = document.getElementById('heroImg');
+  const img1 = '/static/images/hero-image-2.png';
+  const img2 = '/static/images/bold_dan.png';
+
+  heroImg.onclick = function () {
+    const currentSrc = this.src;
+    if (currentSrc.indexOf('hero-image-2.png') !== -1) {
+      this.src = img2;
+    } else {
+      this.src = img1;
     }
   }
 </script>
