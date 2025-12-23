@@ -69,17 +69,15 @@
   {% for q in quotes %}
   <article class="card">
     <form method="post" action="/admin/update/{{ q.id }}?mode={{ mode }}">
-      <textarea name="content" class="quote"
+      <textarea name="content" class="quote admin-textarea"
         {% if not is_admin %}readonly{% endif %}
-        style="width: 100%; border: 0; background: transparent; font-family: inherit; font-size: inherit; font-weight: inherit; line-height: inherit; padding: 0; resize: vertical; margin-bottom: 10px;"
         rows="2">{{ q.content }}</textarea>
       <div class="quote-meta">
         <span class="pill {% if q.status == 'PENDING' %}hot{% elif q.status == 'APPROVED' %}acid{% endif %}">{{ q.status
           }}</span>
         <span class="pill">by: 
           {% if is_admin %}
-            <input name="submitted_by" value="{{ q.submitted_by }}"
-              style="border: 0; background: transparent; font-weight: inherit; font-family: inherit; color: inherit; width: 120px; padding: 0;" />
+            <input name="submitted_by" value="{{ q.submitted_by }}" class="admin-inline-input" />
           {% else %}
             {{ q.submitted_by }}
           {% endif %}

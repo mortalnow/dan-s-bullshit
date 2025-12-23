@@ -13,7 +13,12 @@ A FastAPI-based quote submission and moderation system with a modern, minimal we
   - **Quote Dispenser**: Shuffle through approved wisdom on the home page.
   - **Donate Button**: Support the service via a QR code popup.
   - **Easter Egg**: Click the character's head for a surprise.
-  - **Mobile Responsive**: Fully optimized for phones and tablets with adaptive layouts.
+  - **Mobile Responsive**: Fully optimized for modern smartphones including iPhone 15/16 Pro with:
+    - Safe area support for notch and Dynamic Island
+    - Touch-optimized buttons (minimum 44px touch targets)
+    - iOS-specific input handling to prevent auto-zoom
+    - Compact header design for maximum content visibility
+    - Dynamic viewport height for proper mobile browser chrome handling
 - **Robust Authentication**:
   - Unified login for both administrators and regular users.
   - Role-based access control (Admins vs. Users).

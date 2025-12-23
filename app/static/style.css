@@ -15,23 +15,37 @@
   --pink: #ff33d6;
   --blue: #245bff;
   --hot: #ff2d2d;
+
+  /* Mobile-specific variables */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
-html,
-body {
+html {
   height: 100%;
+  /* Prevent iOS text size adjustment */
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
+  min-height: 100%;
   margin: 0;
   color: var(--ink);
   background: var(--bg);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   letter-spacing: -0.012em;
+  /* Safe area padding for notch/Dynamic Island */
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  /* Prevent horizontal overflow */
+  overflow-x: hidden;
 }
 
 a {
@@ -44,12 +58,24 @@ a:hover {
   background: var(--sun);
 }
 
+/* Improve touch targets for mobile */
+@media (hover: none) and (pointer: coarse) {
+  a:hover {
+    background: transparent;
+  }
+  
+  a:active {
+    background: var(--sun);
+  }
+}
+
 .container code {
   padding: 2px 6px;
   border: 3px solid var(--line);
   background: #fff;
   box-shadow: 4px 4px 0 var(--line);
   font-weight: 900;
+  word-break: break-word;
 }
 
 .container {
@@ -58,12 +84,17 @@ a:hover {
   padding: 22px;
 }
 
+/* =====================================================
+   TOPBAR - Mobile Optimized
+   ===================================================== */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 10;
   background: var(--sun);
   border-bottom: var(--border-thick);
+  /* Account for notch/Dynamic Island */
+  padding-top: var(--safe-top);
 }
 
 .topbar-inner {
@@ -71,26 +102,6 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-}
-
-@media (max-width: 600px) {
-  .topbar-inner {
-    flex-direction: column;
-    padding: 15px;
-    gap: 12px;
-    text-align: center;
-  }
-
-  .brand {
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .topbar-actions {
-    width: 100%;
-    justify-content: center;
-  }
 }
 
 .brand {
@@ -114,6 +125,7 @@ a:hover {
   box-shadow: var(--shadow-sm);
   font-weight: 900;
   letter-spacing: -0.04em;
+  flex-shrink: 0;
 }
 
 .brand-title {
@@ -134,6 +146,73 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Mobile Topbar - Compact Single Row */
+@media (max-width: 600px) {
+  .topbar {
+    /* Don't be sticky on mobile - saves screen real estate */
+    position: relative;
+  }
+  
+  .topbar-inner {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    padding: 10px 12px;
+    gap: 8px;
+    text-align: left;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .brand {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .logo {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+    box-shadow: 4px 4px 0 var(--line);
+  }
+
+  .brand-title {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+
+  .topbar-actions {
+    gap: 6px;
+  }
+
+  .topbar-admin {
+    padding: 8px 10px;
+    font-size: 12px;
+    box-shadow: 4px 4px 0 var(--line);
+  }
+}
+
+/* Even smaller screens */
+@media (max-width: 380px) {
+  .brand-title {
+    font-size: 0.75rem;
+  }
+  
+  .topbar-admin {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
 }
 
 .topbar-instagram {
@@ -237,8 +316,12 @@ a:hover {
 
 main {
   min-height: calc(100vh - 160px);
+  min-height: calc(100dvh - 160px);
 }
 
+/* =====================================================
+   HERO SECTION - Mobile Optimized
+   ===================================================== */
 .hero {
   border: var(--border-thick);
   background: #fff;
@@ -251,37 +334,9 @@ main {
   gap: 20px;
 }
 
-@media (max-width: 600px) {
-  .hero {
-    flex-direction: column;
-    text-align: center;
-    padding: 30px 20px;
-  }
-
-  .hero-content {
-    order: 1;
-  }
-
-  .hero-image {
-    display: none;
-  }
-  
-  .hero h2 {
-    font-size: 32px;
-    white-space: normal;
-  }
-  
-  .hero p {
-    margin: 0 auto;
-  }
-
-  .actions {
-    justify-content: center;
-  }
-}
-
 .hero-content {
   flex: 1;
+  min-width: 0;
 }
 
 .hero-image {
@@ -305,11 +360,15 @@ main {
 
 .hero h2 {
   margin: 0 0 6px 0;
-  font-size: 40px;
+  font-size: clamp(24px, 6vw, 40px);
   letter-spacing: -0.04em;
   text-transform: uppercase;
   text-shadow: 3px 3px 0 var(--sun);
-  white-space: nowrap;
+  /* Allow wrapping on mobile */
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .hero p {
@@ -327,6 +386,41 @@ main {
   color: var(--ink);
 }
 
+/* Mobile Hero */
+@media (max-width: 600px) {
+  .hero {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px 16px;
+    box-shadow: 8px 8px 0 var(--line);
+  }
+
+  .hero-content {
+    order: 1;
+  }
+
+  .hero-image {
+    display: none;
+  }
+  
+  .hero h2 {
+    font-size: clamp(22px, 7vw, 32px);
+    text-shadow: 2px 2px 0 var(--sun);
+  }
+  
+  .hero p {
+    margin: 0 auto;
+    font-size: 14px;
+  }
+
+  .actions {
+    justify-content: center;
+  }
+}
+
+/* =====================================================
+   BADGE ROW
+   ===================================================== */
 .badge-row {
   display: flex;
   flex-wrap: wrap;
@@ -350,24 +444,49 @@ main {
   background: var(--acid);
 }
 
+@media (max-width: 600px) {
+  .badge-row {
+    justify-content: center;
+  }
+  
+  .badge {
+    padding: 5px 8px;
+    font-size: 12px;
+    box-shadow: 4px 4px 0 var(--line);
+  }
+}
+
+/* =====================================================
+   GRID SYSTEM - Mobile First
+   ===================================================== */
 .grid {
   display: grid;
   gap: 14px;
   margin-top: 16px;
 }
 
-@media (max-width: 820px) {
-  .grid {
-    grid-template-columns: 1fr !important;
-  }
+/* Single column by default (mobile first) */
+.grid.two {
+  grid-template-columns: 1fr;
 }
 
+/* Two columns on larger screens */
 @media (min-width: 820px) {
   .grid.two {
     grid-template-columns: 1fr 1fr;
   }
 }
 
+@media (max-width: 600px) {
+  .grid {
+    gap: 12px;
+    margin-top: 12px;
+  }
+}
+
+/* =====================================================
+   CARDS
+   ===================================================== */
 .card {
   border: var(--border-thick);
   background: #fff;
@@ -381,6 +500,20 @@ main {
   letter-spacing: -0.03em;
 }
 
+@media (max-width: 600px) {
+  .card {
+    padding: 14px;
+    box-shadow: 8px 8px 0 var(--line);
+  }
+  
+  .card h3 {
+    font-size: 1rem;
+  }
+}
+
+/* =====================================================
+   QUOTES
+   ===================================================== */
 .quote {
   margin: 0;
   padding: 0;
@@ -399,12 +532,27 @@ main {
   font-size: 13px;
 }
 
+@media (max-width: 600px) {
+  .quote {
+    font-size: 16px;
+  }
+  
+  .quote-meta {
+    gap: 6px;
+    font-size: 11px;
+  }
+}
+
+/* =====================================================
+   PILLS
+   ===================================================== */
 .pill {
   border: var(--border);
   padding: 3px 10px;
   background: #fff;
   font-weight: 900;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .pill.hot {
@@ -421,6 +569,17 @@ main {
   background: var(--acid);
 }
 
+@media (max-width: 600px) {
+  .pill {
+    padding: 2px 6px;
+    font-size: 10px;
+    border-width: 3px;
+  }
+}
+
+/* =====================================================
+   ACTIONS & BUTTONS - Touch Optimized
+   ===================================================== */
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -440,13 +599,9 @@ main {
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: transform 0.06s linear;
-}
-
-@media (max-width: 600px) {
-  .btn {
-    padding: 10px 12px;
-    font-size: 14px;
-  }
+  /* Minimum touch target for accessibility */
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .btn:hover {
@@ -471,6 +626,35 @@ main {
   background: var(--sun);
 }
 
+@media (max-width: 600px) {
+  .actions {
+    gap: 8px;
+  }
+  
+  .btn {
+    padding: 10px 12px;
+    font-size: 13px;
+    box-shadow: 4px 4px 0 var(--line);
+    /* Ensure minimum touch target */
+    min-height: 44px;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .btn:hover {
+    transform: none;
+  }
+  
+  .btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 4px 4px 0 var(--line);
+  }
+}
+
+/* =====================================================
+   FORMS - Mobile Optimized
+   ===================================================== */
 .form {
   display: grid;
   gap: 10px;
@@ -488,10 +672,13 @@ input[type="password"] {
   width: 100%;
   border: var(--border);
   padding: 12px;
-  font-size: 16px;
+  font-size: 16px; /* Prevents iOS zoom on focus */
   background: #fff;
   box-shadow: var(--shadow-sm);
   font-weight: 800;
+  border-radius: 0; /* Remove iOS default styling */
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 textarea:focus,
@@ -502,15 +689,36 @@ input[type="password"]:focus {
   background: var(--sun);
 }
 
+@media (max-width: 600px) {
+  textarea,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"] {
+    padding: 10px;
+    box-shadow: 4px 4px 0 var(--line);
+  }
+}
+
 .hint {
   color: var(--muted);
   font-weight: 700;
   margin: 0;
 }
 
+@media (max-width: 600px) {
+  .hint {
+    font-size: 13px;
+  }
+}
+
+/* =====================================================
+   FOOTER - Mobile Optimized
+   ===================================================== */
 footer {
   border-top: var(--border-thick);
   background: #fff;
+  /* Account for bottom safe area (home indicator) */
+  padding-bottom: var(--safe-bottom);
 }
 
 .footer-inner {
@@ -531,6 +739,29 @@ footer {
   font-weight: 900;
 }
 
+@media (max-width: 600px) {
+  .footer-inner {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 12px;
+  }
+  
+  .kicker {
+    font-size: 12px;
+    text-align: center;
+    box-shadow: 4px 4px 0 var(--line);
+  }
+  
+  .instagram-fixed {
+    margin-left: 0;
+    align-self: center;
+  }
+}
+
+/* =====================================================
+   TICKER - Mobile Optimized
+   ===================================================== */
 .ticker {
   border-top: var(--border-thick);
   border-bottom: var(--border-thick);
@@ -578,7 +809,23 @@ footer {
   }
 }
 
-/* Index poster bits ---------------------------------------------- */
+@media (max-width: 600px) {
+  .ticker-track {
+    font-size: 13px;
+    gap: 12px;
+    padding: 8px 0;
+  }
+  
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-width: 3px;
+  }
+}
+
+/* =====================================================
+   INDEX POSTER - Mobile Optimized
+   ===================================================== */
 .poster {
   position: relative;
   border: var(--border-thick);
@@ -596,15 +843,6 @@ footer {
   top: -18px;
   right: 18px;
   z-index: 2;
-}
-
-@media (max-width: 600px) {
-  .btn-poster-shuffle {
-    top: -10px;
-    right: 10px;
-    padding: 8px 10px;
-    font-size: 12px;
-  }
 }
 
 .poster-head {
@@ -636,15 +874,53 @@ footer {
 .quote-big {
   margin: auto 0;
   padding: 0;
-  font-size: clamp(22px, 3.2vw, 46px);
-  line-height: 1.08;
+  font-size: clamp(18px, 4vw, 46px);
+  line-height: 1.15;
   font-weight: 950;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
+@media (max-width: 600px) {
+  .poster {
+    min-height: 250px;
+    padding: 14px;
+    box-shadow: 8px 8px 0 var(--line);
+  }
+  
+  .btn-poster-shuffle {
+    top: -12px;
+    right: 12px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  
+  .poster-head {
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+  
+  .stamp {
+    padding: 4px 8px;
+    font-size: 11px;
+    box-shadow: 4px 4px 0 var(--line);
+  }
+  
+  .quote-big {
+    font-size: clamp(16px, 5vw, 24px);
+    line-height: 1.2;
+    padding: 10px 0;
+  }
+}
+
+/* =====================================================
+   LIST COMPONENT - Mobile Optimized
+   ===================================================== */
 .list {
   margin: 10px 0 0 0;
   padding: 0;
@@ -667,6 +943,24 @@ footer {
   display: inline-block;
 }
 
+@media (max-width: 600px) {
+  .list {
+    gap: 8px;
+  }
+  
+  .list li {
+    padding: 8px 10px;
+    font-size: 13px;
+    box-shadow: 4px 4px 0 var(--line);
+    /* Allow text to wrap properly */
+    white-space: normal;
+  }
+  
+  .list li strong {
+    font-size: 14px;
+  }
+}
+
 .note {
   margin-top: 12px;
   border: var(--border);
@@ -681,7 +975,20 @@ footer {
   margin-bottom: 6px;
 }
 
-/* Image styles */
+@media (max-width: 600px) {
+  .note {
+    padding: 8px 10px;
+    box-shadow: 4px 4px 0 var(--line);
+  }
+  
+  .note-title {
+    font-size: 12px;
+  }
+}
+
+/* =====================================================
+   IMAGE STYLES - Mobile Optimized
+   ===================================================== */
 .quote-with-image {
   display: flex;
   align-items: flex-start;
@@ -720,7 +1027,16 @@ footer {
   }
 }
 
-/* Modal styles */
+@media (max-width: 600px) {
+  .quote-image,
+  .sidebar-image {
+    box-shadow: 4px 4px 0 var(--line);
+  }
+}
+
+/* =====================================================
+   MODAL - Mobile Optimized
+   ===================================================== */
 .modal {
   display: none;
   position: fixed;
@@ -734,13 +1050,22 @@ footer {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  /* Account for safe areas */
+  padding-top: calc(20px + var(--safe-top));
+  padding-bottom: calc(20px + var(--safe-bottom));
+  padding-left: calc(20px + var(--safe-left));
+  padding-right: calc(20px + var(--safe-right));
 }
 
 .modal-content {
   max-width: 400px;
-  width: 90%;
+  width: 100%;
   position: relative;
   animation: modalSlide 0.2s ease-out;
+  max-height: calc(100vh - 80px);
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 @keyframes modalSlide {
@@ -768,6 +1093,11 @@ footer {
   font-weight: 900;
   cursor: pointer;
   line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-close:hover {
@@ -780,4 +1110,119 @@ footer {
   border: var(--border);
   box-shadow: var(--shadow-sm);
   margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+  .modal {
+    padding: 12px;
+    padding-top: calc(12px + var(--safe-top));
+    padding-bottom: calc(12px + var(--safe-bottom));
+  }
+  
+  .modal-content {
+    max-height: calc(100vh - 50px);
+    max-height: calc(100dvh - 50px);
+  }
+  
+  .modal-header h3 {
+    font-size: 1rem;
+  }
+  
+  .donate-image {
+    box-shadow: 4px 4px 0 var(--line);
+  }
+}
+
+/* =====================================================
+   ADMIN PAGE - Mobile Optimized
+   ===================================================== */
+
+/* Admin textarea for editing quotes */
+.admin-textarea {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  padding: 0;
+  resize: vertical;
+  margin-bottom: 10px;
+  -webkit-appearance: none;
+  border-radius: 0;
+}
+
+/* Admin inline input for submitter name */
+.admin-inline-input {
+  border: 0;
+  background: transparent;
+  font-weight: inherit;
+  font-family: inherit;
+  color: inherit;
+  width: 100%;
+  max-width: 120px;
+  padding: 0;
+  -webkit-appearance: none;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+@media (max-width: 600px) {
+  /* Admin inline forms */
+  .admin-textarea {
+    font-size: 14px;
+    min-height: 60px;
+  }
+  
+  .admin-inline-input {
+    max-width: 80px;
+    font-size: 10px;
+  }
+  
+  .card .actions form {
+    width: auto;
+  }
+  
+  .card .actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+  
+  /* Make user info wrap properly */
+  .user-info {
+    word-break: break-word;
+  }
+}
+
+/* =====================================================
+   CONTAINER ADJUSTMENTS - Mobile
+   ===================================================== */
+@media (max-width: 600px) {
+  .container {
+    padding: 14px 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .container {
+    padding: 12px 10px;
+  }
+}
+
+/* =====================================================
+   UTILITY: Prevent Content Overflow
+   ===================================================== */
+.container,
+.card,
+.hero,
+.poster {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Prevent images from breaking layout */
+img {
+  max-width: 100%;
+  height: auto;
 }
