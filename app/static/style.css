@@ -882,6 +882,8 @@ footer {
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100%;
+  flex-shrink: 0;
 }
 
 .like-btn {
@@ -889,6 +891,8 @@ footer {
   font-size: 14px;
   padding: 10px 16px;
   min-width: auto;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .like-btn:hover {
