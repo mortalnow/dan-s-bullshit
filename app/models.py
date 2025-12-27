@@ -32,6 +32,7 @@ class QuoteResponse(BaseModel):
     submitted_by: Optional[str] = None
     verified_at: Optional[datetime] = None
     verified_by: Optional[str] = None
+    likes: int = 0
 
 
 class QuoteListResponse(BaseModel):

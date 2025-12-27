@@ -54,6 +54,7 @@ class MongoQuoteStore:
             submitted_by=doc.get("submitted_by"),
             verified_at=doc.get("verified_at"),
             verified_by=doc.get("verified_by"),
+            likes=doc.get("likes", 0),
         )
 
     # Initialization ------------------------------------------------
@@ -171,6 +172,7 @@ class MongoQuoteStore:
                 "submitted_by": submitted_by,
                 "verified_at": None,
                 "verified_by": None,
+                "likes": 0,
             }
             await self._collection.insert_one(doc)
             return self._doc_to_quote(doc)
@@ -298,6 +300,21 @@ class MongoQuoteStore:
             if not doc:
                 return None
             return self._doc_to_quote(doc[0])
+        except PyMongoError as exc:
+            raise MongoDBError(str(exc)) from exc
+
+    async def increment_likes(self, quote_id: str) -> QuoteResponse:
+        """Increment the likes count for a quote."""
+        try:
+            updated = await self._collection.find_one_and_update(
+                {"_id": quote_id},
+                {"$inc": {"likes": 1}, "$setOnInsert": {"likes": 1}},
+                return_document=ReturnDocument.AFTER,
+                upsert=False,
+            )
+            if not updated:
+                raise MongoDBError("Quote not found")
+            return self._doc_to_quote(updated)
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc
 

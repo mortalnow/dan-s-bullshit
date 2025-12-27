@@ -23,13 +23,19 @@
     </header>
 
     {% if quote %}
-    <blockquote class="quote-big" id="quoteDisplay">{{ quote.content }}</blockquote>
+    <blockquote class="quote-big" id="quoteDisplay" data-quote-id="{{ quote.id }}">{{ quote.content }}</blockquote>
     {% else %}
     <div class="empty" id="emptyDisplay">
       <h3>No approved quotes yet</h3>
       <p class="hint">For local demo: run <code>uv run python scripts/import_records.py</code> then refresh.</p>
     </div>
     {% endif %}
+    
+    <div class="like-container" id="likeContainer" {% if not quote %}style="display: none;"{% endif %}>
+      <button class="btn like-btn" id="likeBtn" data-quote-id="{% if quote %}{{ quote.id }}{% endif %}">
+        Oh, Shit! <span class="like-count" id="likeCount">{% if quote %}{{ quote.likes or 0 }}{% else %}0{% endif %}</span>
+      </button>
+    </div>
   </article>
 
   <aside class="card sidebar">
@@ -37,7 +43,7 @@
     <ul class="list">
       <li><strong>Shuffle:</strong> click "Shuffle" until you laugh.</li>
       <li><strong>Register:</strong> <a href="/register">create an account</a> to join.</li>
-      <li><strong>Submit:</strong> once <span class="pill acid">APPROVED</span>, you can add quotes.</li>
+      <li><strong>Submit:</strong> <span style="font-size: 0.85em;">once <span class="pill acid">APPROVED</span>, you can add quotes.</span></li>
       <li><strong>Approve:</strong> <span style="font-size: 0.85em;">open <a class="btn topbar-admin"
           href="/admin"
           style="font-size: 12px; display: inline-block; padding: 6px 10px;">ADMIN</a> and accept your destiny.</span></li>
@@ -136,16 +142,41 @@
             blockquote.className = 'quote-big';
             blockquote.id = 'quoteDisplay';
             blockquote.textContent = quote.content;
+            if (quote.id) {
+              blockquote.setAttribute('data-quote-id', quote.id);
+            }
             const poster = document.querySelector('.poster');
-            const header = document.querySelector('.poster-head');
-            if (header && header.nextSibling) {
-              poster.insertBefore(blockquote, header.nextSibling);
+            const likeContainer = document.getElementById('likeContainer');
+            if (likeContainer) {
+              poster.insertBefore(blockquote, likeContainer);
             } else {
-              poster.appendChild(blockquote);
+              const header = document.querySelector('.poster-head');
+              if (header && header.nextSibling) {
+                poster.insertBefore(blockquote, header.nextSibling);
+              } else {
+                poster.appendChild(blockquote);
+              }
             }
           } else {
             quoteDisplay.textContent = quote.content;
             quoteDisplay.style.display = 'block';
+            if (quote.id) {
+              quoteDisplay.setAttribute('data-quote-id', quote.id);
+            }
+          }
+          
+          // Update like button
+          const likeBtn = document.getElementById('likeBtn');
+          const likeCount = document.getElementById('likeCount');
+          const likeContainer = document.getElementById('likeContainer');
+          if (likeBtn && quote.id) {
+            likeBtn.setAttribute('data-quote-id', quote.id);
+            if (likeCount) {
+              likeCount.textContent = quote.likes || 0;
+            }
+            if (likeContainer) {
+              likeContainer.style.display = 'block';
+            }
           }
           
           // Recalculate font size for new quote
@@ -154,6 +185,10 @@
           // No quote available - show empty state
           if (quoteDisplay) {
             quoteDisplay.style.display = 'none';
+          }
+          const likeContainer = document.getElementById('likeContainer');
+          if (likeContainer) {
+            likeContainer.style.display = 'none';
           }
           if (emptyDisplay) {
             emptyDisplay.style.display = 'block';
@@ -178,6 +213,40 @@
         // Re-enable button
         shuffleBtn.disabled = false;
         shuffleBtn.textContent = 'Shuffle';
+      }
+    });
+  }
+
+  // Like button - increment likes count
+  const likeBtn = document.getElementById('likeBtn');
+  if (likeBtn) {
+    likeBtn.addEventListener('click', async function() {
+      const quoteId = likeBtn.getAttribute('data-quote-id');
+      if (!quoteId) return;
+      
+      // Disable button during request
+      likeBtn.disabled = true;
+      const originalText = likeBtn.innerHTML;
+      
+      try {
+        const response = await fetch(`/api/quotes/${quoteId}/like`, {
+          method: 'POST',
+        });
+        
+        if (response.ok) {
+          const quote = await response.json();
+          const likeCount = document.getElementById('likeCount');
+          if (likeCount) {
+            likeCount.textContent = quote.likes || 0;
+          }
+        } else {
+          console.error('Failed to like quote');
+        }
+      } catch (error) {
+        console.error('Error liking quote:', error);
+      } finally {
+        // Re-enable button
+        likeBtn.disabled = false;
       }
     });
   }

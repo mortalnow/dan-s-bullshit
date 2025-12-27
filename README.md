@@ -10,7 +10,8 @@ A FastAPI-based quote submission and moderation system with a modern, minimal we
   - **User Management**: Approve new registrations or delete accounts.
   - **Full Archive**: View the complete history of approved and rejected quotes (Admins only).
 - **Interactive UI**:
-  - **Quote Dispenser**: Shuffle through approved wisdom on the home page.
+  - **Quote Dispenser**: Shuffle through approved wisdom on the home page with AJAX-powered instant updates (no page refresh).
+  - **Like Button**: "Oh, Shit!" button allows anyone (including unregistered users) to like quotes and see the total click count.
   - **Donate Button**: Support the service via a QR code popup.
   - **Custom Favicon**: "DB" logo displays in browser tabs.
   - **Mobile Responsive**: Fully optimized for modern smartphones including iPhone 15/16 Pro with:
@@ -100,6 +101,7 @@ uv run uvicorn app.main:app --reload
 ### Public Endpoints
 - `GET /api/quotes` - List approved quotes
 - `GET /api/quotes/random` - Get a random approved quote
+- `POST /api/quotes/{quote_id}/like` - Increment like count for a quote (no authentication required)
 - `POST /api/quotes` - Submit a new quote (requires approved user account)
 
 ### Admin Endpoints

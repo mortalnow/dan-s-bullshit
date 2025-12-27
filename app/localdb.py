@@ -28,6 +28,12 @@ class LocalQuoteStore:
 
     def _init_schema(self) -> None:
         with self._connect() as conn:
+            # Check if likes column exists, if not add it
+            cursor = conn.execute("PRAGMA table_info(quotes)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if "likes" not in columns:
+                conn.execute("ALTER TABLE quotes ADD COLUMN likes INTEGER DEFAULT 0")
+            
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS quotes (
@@ -39,7 +45,8 @@ class LocalQuoteStore:
                     created_at TEXT,
                     submitted_by TEXT,
                     verified_at TEXT,
-                    verified_by TEXT
+                    verified_by TEXT,
+                    likes INTEGER DEFAULT 0
                 )
                 """
             )
@@ -66,6 +73,14 @@ class LocalQuoteStore:
 
     @staticmethod
     def _row_to_quote(row: sqlite3.Row) -> QuoteResponse:
+        # Handle likes field - it might not exist in older database schemas
+        likes = 0
+        try:
+            if "likes" in row.keys():
+                likes = row["likes"] or 0
+        except (KeyError, IndexError):
+            likes = 0
+        
         return QuoteResponse(
             id=row["id"],
             content=row["content"],
@@ -76,6 +91,7 @@ class LocalQuoteStore:
             submitted_by=row["submitted_by"],
             verified_at=row["verified_at"],
             verified_by=row["verified_by"],
+            likes=likes,
         )
 
     # User methods ------------------------------------------------
@@ -187,8 +203,8 @@ class LocalQuoteStore:
                 created_at = self._now_iso()
                 conn.execute(
                     """
-                    INSERT INTO quotes (id, content, content_hash, status, source, created_at, submitted_by)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO quotes (id, content, content_hash, status, source, created_at, submitted_by, likes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 0)
                     """,
                     (quote_id, content, content_hash, status, source, created_at, submitted_by),
                 )
@@ -366,6 +382,29 @@ class LocalQuoteStore:
                     ).fetchone()
                 if not row:
                     return None
+                return self._row_to_quote(row)
+        except sqlite3.Error as exc:
+            raise LocalDBError(str(exc)) from exc
+
+    async def increment_likes(self, quote_id: str) -> QuoteResponse:
+        """Increment the likes count for a quote."""
+        try:
+            with self._connect() as conn:
+                # First ensure the likes column exists
+                cursor = conn.execute("PRAGMA table_info(quotes)")
+                columns = [row[1] for row in cursor.fetchall()]
+                if "likes" not in columns:
+                    conn.execute("ALTER TABLE quotes ADD COLUMN likes INTEGER DEFAULT 0")
+                
+                # Update the likes count
+                conn.execute(
+                    "UPDATE quotes SET likes = COALESCE(likes, 0) + 1 WHERE id = ?",
+                    (quote_id,),
+                )
+                row = conn.execute("SELECT * FROM quotes WHERE id = ?", (quote_id,)).fetchone()
+                conn.commit()
+                if not row:
+                    raise LocalDBError("Quote not found")
                 return self._row_to_quote(row)
         except sqlite3.Error as exc:
             raise LocalDBError(str(exc)) from exc

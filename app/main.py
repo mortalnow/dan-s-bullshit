@@ -435,6 +435,15 @@ async def api_random_quote(db: QuoteStore = Depends(get_db_client)):
         handle_db_error(exc)
 
 
+@app.post("/api/quotes/{quote_id}/like", response_model=QuoteResponse)
+async def api_like_quote(quote_id: str, db: QuoteStore = Depends(get_db_client)):
+    """Increment the likes count for a quote. No authentication required."""
+    try:
+        return await db.increment_likes(quote_id)
+    except (MongoDBError, LocalDBError) as exc:
+        handle_db_error(exc)
+
+
 @app.get("/api/quotes/{quote_id}", response_model=QuoteResponse)
 async def api_get_quote(quote_id: str, db: QuoteStore = Depends(get_db_client)):
     try:

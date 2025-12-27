@@ -495,7 +495,7 @@ main {
 }
 
 .card.sidebar {
-  height: 435px;
+  height: 400px;
   width: 450px;
 }
 
@@ -857,7 +857,7 @@ footer {
   flex-direction: column;
   justify-content: center;
   /* Fixed size for desktop */
-  height: 435px;
+  height: 400px;
   width: 450px;
 }
 
@@ -874,6 +874,33 @@ footer {
   top: -18px;
   right: 18px;
   z-index: 2;
+}
+
+.like-container {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.like-btn {
+  background: var(--pink);
+  font-size: 14px;
+  padding: 10px 16px;
+  min-width: auto;
+}
+
+.like-btn:hover {
+  background: var(--hot);
+  color: #fff;
+}
+
+.like-count {
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 3px solid var(--ink);
+  font-weight: 950;
 }
 
 .poster-head {
@@ -948,6 +975,15 @@ footer {
     font-size: 20px;
     line-height: 1.2;
     padding: 10px 0;
+  }
+  
+  .like-container {
+    padding-top: 12px;
+  }
+  
+  .like-btn {
+    font-size: 12px;
+    padding: 8px 12px;
   }
 }
 
