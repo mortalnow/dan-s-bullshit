@@ -614,6 +614,16 @@ main {
   /* Minimum touch target for accessibility */
   min-height: 44px;
   min-width: 44px;
+  font-family: inherit;
+  font-size: inherit;
+  text-decoration: none;
+}
+
+/* Ensure buttons don't have default browser styling */
+button.btn {
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 0;
 }
 
 .btn:hover {

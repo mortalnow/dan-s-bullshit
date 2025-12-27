@@ -17,15 +17,15 @@
 
 <section class="grid two">
   <article class="poster">
-    <a class="btn primary btn-poster-shuffle" href="/">Shuffle</a>
+    <button class="btn primary btn-poster-shuffle" id="shuffleBtn">Shuffle</button>
     <header class="poster-head">
       <div class="stamp">CERTIFIED</div>
     </header>
 
     {% if quote %}
-    <blockquote class="quote-big">{{ quote.content }}</blockquote>
+    <blockquote class="quote-big" id="quoteDisplay">{{ quote.content }}</blockquote>
     {% else %}
-    <div class="empty">
+    <div class="empty" id="emptyDisplay">
       <h3>No approved quotes yet</h3>
       <p class="hint">For local demo: run <code>uv run python scripts/import_records.py</code> then refresh.</p>
     </div>
@@ -38,9 +38,9 @@
       <li><strong>Shuffle:</strong> click "Shuffle" until you laugh.</li>
       <li><strong>Register:</strong> <a href="/register">create an account</a> to join.</li>
       <li><strong>Submit:</strong> once <span class="pill acid">APPROVED</span>, you can add quotes.</li>
-      <li><strong>Approve:</strong> open <a class="btn topbar-admin"
+      <li><strong>Approve:</strong> <span style="font-size: 0.85em;">open <a class="btn topbar-admin"
           href="/admin"
-          style="font-size: 12px; display: inline-block; padding: 6px 10px;">ADMIN</a> and accept your destiny.</li>
+          style="font-size: 12px; display: inline-block; padding: 6px 10px;">ADMIN</a> and accept your destiny.</span></li>
     </ul>
     <div class="note">
       <div class="note-title">
@@ -108,5 +108,78 @@
 
   fitQuoteToContainer();
   window.addEventListener('resize', fitQuoteToContainer);
+
+  // Shuffle button - fetch new quote without page refresh
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const quoteDisplay = document.getElementById('quoteDisplay');
+  const emptyDisplay = document.getElementById('emptyDisplay');
+  
+  if (shuffleBtn) {
+    shuffleBtn.addEventListener('click', async function() {
+      // Disable button during fetch
+      shuffleBtn.disabled = true;
+      shuffleBtn.textContent = 'Loading...';
+      
+      try {
+        const response = await fetch('/api/quotes/random');
+        const quote = await response.json();
+        
+        if (quote && quote.content) {
+          // Show quote, hide empty state
+          if (emptyDisplay) {
+            emptyDisplay.style.display = 'none';
+          }
+          
+          // Create or update quote display
+          if (!quoteDisplay) {
+            const blockquote = document.createElement('blockquote');
+            blockquote.className = 'quote-big';
+            blockquote.id = 'quoteDisplay';
+            blockquote.textContent = quote.content;
+            const poster = document.querySelector('.poster');
+            const header = document.querySelector('.poster-head');
+            if (header && header.nextSibling) {
+              poster.insertBefore(blockquote, header.nextSibling);
+            } else {
+              poster.appendChild(blockquote);
+            }
+          } else {
+            quoteDisplay.textContent = quote.content;
+            quoteDisplay.style.display = 'block';
+          }
+          
+          // Recalculate font size for new quote
+          setTimeout(fitQuoteToContainer, 10);
+        } else {
+          // No quote available - show empty state
+          if (quoteDisplay) {
+            quoteDisplay.style.display = 'none';
+          }
+          if (emptyDisplay) {
+            emptyDisplay.style.display = 'block';
+          } else {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'empty';
+            emptyDiv.id = 'emptyDisplay';
+            emptyDiv.innerHTML = '<h3>No approved quotes yet</h3><p class="hint">For local demo: run <code>uv run python scripts/import_records.py</code> then refresh.</p>';
+            const poster = document.querySelector('.poster');
+            const header = document.querySelector('.poster-head');
+            if (header && header.nextSibling) {
+              poster.insertBefore(emptyDiv, header.nextSibling);
+            } else {
+              poster.appendChild(emptyDiv);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching quote:', error);
+        alert('Failed to fetch quote. Please try again.');
+      } finally {
+        // Re-enable button
+        shuffleBtn.disabled = false;
+        shuffleBtn.textContent = 'Shuffle';
+      }
+    });
+  }
 </script>
 {% endblock %}
