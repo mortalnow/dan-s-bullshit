@@ -983,11 +983,16 @@ footer {
   
   .like-container {
     padding-top: 12px;
+    position: relative;
+    left: 0;
+    right: 0;
+    width: 100%;
   }
   
   .like-btn {
     font-size: 12px;
     padding: 8px 12px;
+    margin: 0 auto;
   }
 }
 
@@ -1016,6 +1021,10 @@ footer {
   display: inline-block;
 }
 
+.list-text-sm {
+  font-size: 0.85em;
+}
+
 @media (max-width: 600px) {
   .list {
     gap: 8px;
@@ -1031,6 +1040,10 @@ footer {
   
   .list li strong {
     font-size: 14px;
+  }
+  
+  .list-text-sm {
+    font-size: 0.72em;
   }
 }
 

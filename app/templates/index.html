@@ -43,8 +43,8 @@
     <ul class="list">
       <li><strong>Shuffle:</strong> click "Shuffle" until you laugh.</li>
       <li><strong>Register:</strong> <a href="/register">create an account</a> to join.</li>
-      <li><strong>Submit:</strong> <span style="font-size: 0.85em;">once <span class="pill acid">APPROVED</span>, you can add quotes.</span></li>
-      <li><strong>Approve:</strong> <span style="font-size: 0.85em;">open <a class="btn topbar-admin"
+      <li><strong>Submit:</strong> <span class="list-text-sm">once <span class="pill acid">APPROVED</span>, you can add quotes.</span></li>
+      <li><strong>Approve:</strong> <span class="list-text-sm">open <a class="btn topbar-admin"
           href="/admin"
           style="font-size: 12px; display: inline-block; padding: 6px 10px;">ADMIN</a> and accept your destiny.</span></li>
     </ul>
@@ -222,25 +222,31 @@
   if (likeBtn) {
     likeBtn.addEventListener('click', async function() {
       const quoteId = likeBtn.getAttribute('data-quote-id');
-      if (!quoteId) return;
+      if (!quoteId) {
+        console.error('No quote ID found');
+        return;
+      }
       
       // Disable button during request
       likeBtn.disabled = true;
-      const originalText = likeBtn.innerHTML;
       
       try {
         const response = await fetch(`/api/quotes/${quoteId}/like`, {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
         
         if (response.ok) {
           const quote = await response.json();
           const likeCount = document.getElementById('likeCount');
-          if (likeCount) {
-            likeCount.textContent = quote.likes || 0;
+          if (likeCount && quote.likes !== undefined) {
+            likeCount.textContent = quote.likes;
           }
         } else {
-          console.error('Failed to like quote');
+          const errorText = await response.text();
+          console.error('Failed to like quote:', response.status, errorText);
         }
       } catch (error) {
         console.error('Error liking quote:', error);

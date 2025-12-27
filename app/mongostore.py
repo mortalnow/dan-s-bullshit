@@ -308,9 +308,8 @@ class MongoQuoteStore:
         try:
             updated = await self._collection.find_one_and_update(
                 {"_id": quote_id},
-                {"$inc": {"likes": 1}, "$setOnInsert": {"likes": 1}},
+                {"$inc": {"likes": 1}},
                 return_document=ReturnDocument.AFTER,
-                upsert=False,
             )
             if not updated:
                 raise MongoDBError("Quote not found")
