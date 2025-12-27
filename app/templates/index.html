@@ -87,5 +87,26 @@
     }
   }
 
+  // Dynamic font sizing for quote to fit container
+  function fitQuoteToContainer() {
+    const quote = document.querySelector('.quote-big');
+    if (!quote) return;
+    
+    const container = quote.parentElement;
+    const isMobile = window.innerWidth <= 600;
+    const maxSize = isMobile ? 20 : 32;
+    const minSize = isMobile ? 12 : 14;
+    
+    let fontSize = maxSize;
+    quote.style.fontSize = fontSize + 'px';
+    
+    while (quote.scrollHeight > quote.clientHeight && fontSize > minSize) {
+      fontSize -= 1;
+      quote.style.fontSize = fontSize + 'px';
+    }
+  }
+
+  fitQuoteToContainer();
+  window.addEventListener('resize', fitQuoteToContainer);
 </script>
 {% endblock %}

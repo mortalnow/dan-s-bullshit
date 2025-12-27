@@ -315,8 +315,7 @@ a:hover {
 }
 
 main {
-  min-height: calc(100vh - 160px);
-  min-height: calc(100dvh - 160px);
+  /* Removed min-height to allow page to fit in single view */
 }
 
 /* =====================================================
@@ -754,8 +753,7 @@ footer {
   }
   
   .instagram-fixed {
-    margin-left: 0;
-    align-self: center;
+    display: none;
   }
 }
 
@@ -835,7 +833,8 @@ footer {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 329px;
+  height: 280px;
+  overflow: hidden;
 }
 
 .btn-poster-shuffle {
@@ -874,7 +873,7 @@ footer {
 .quote-big {
   margin: auto 0;
   padding: 0;
-  font-size: clamp(18px, 4vw, 46px);
+  font-size: 32px;
   line-height: 1.15;
   font-weight: 950;
   text-align: center;
@@ -884,11 +883,13 @@ footer {
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
+  flex: 1;
+  overflow: hidden;
 }
 
 @media (max-width: 600px) {
   .poster {
-    min-height: 250px;
+    height: 220px;
     padding: 14px;
     box-shadow: 8px 8px 0 var(--line);
   }
@@ -912,7 +913,7 @@ footer {
   }
   
   .quote-big {
-    font-size: clamp(16px, 5vw, 24px);
+    font-size: 20px;
     line-height: 1.2;
     padding: 10px 0;
   }
