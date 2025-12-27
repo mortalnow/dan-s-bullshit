@@ -10,11 +10,8 @@
         style="background: #a5c0ff; color: var(--ink); font-family: inherit; font-size: inherit;">Donate</button>
     </div>
   </div>
-  <div class="hero-image" id="heroToggle"
-    style="position: relative; cursor: pointer; display: flex; justify-content: center; align-items: flex-end;">
+  <div class="hero-image">
     <img src="/static/images/hero-image-2.png" alt="Dan's Bullshit">
-    <img id="boldOverlay" src="/static/images/bold_dan.png" alt="Dan's Bullshit"
-      style="position: absolute; display: none; z-index: 10; width: 100%; height: auto; max-height: 180px; object-fit: contain; bottom: -1px; left: 0.5px;">
   </div>
 </section>
 
@@ -90,16 +87,5 @@
     }
   }
 
-  // Hero Image Overlay Toggle
-  const heroToggle = document.getElementById('heroToggle');
-  const boldOverlay = document.getElementById('boldOverlay');
-
-  heroToggle.onclick = function () {
-    if (boldOverlay.style.display === 'none' || boldOverlay.style.display === '') {
-      boldOverlay.style.display = 'block';
-    } else {
-      boldOverlay.style.display = 'none';
-    }
-  }
 </script>
 {% endblock %}

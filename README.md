@@ -12,7 +12,7 @@ A FastAPI-based quote submission and moderation system with a modern, minimal we
 - **Interactive UI**:
   - **Quote Dispenser**: Shuffle through approved wisdom on the home page.
   - **Donate Button**: Support the service via a QR code popup.
-  - **Easter Egg**: Click the character's head for a surprise.
+  - **Custom Favicon**: "DB" logo displays in browser tabs.
   - **Mobile Responsive**: Fully optimized for modern smartphones including iPhone 15/16 Pro with:
     - Safe area support for notch and Dynamic Island
     - Touch-optimized buttons (minimum 44px touch targets)
