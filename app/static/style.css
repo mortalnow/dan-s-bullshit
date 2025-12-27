@@ -472,7 +472,8 @@ main {
 /* Two columns on larger screens */
 @media (min-width: 820px) {
   .grid.two {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 450px);
+    justify-content: center;
   }
 }
 
@@ -491,6 +492,18 @@ main {
   background: #fff;
   box-shadow: var(--shadow);
   padding: 16px;
+}
+
+.card.sidebar {
+  height: 435px;
+  width: 450px;
+}
+
+@media (max-width: 820px) {
+  .card.sidebar {
+    width: 100%;
+    height: auto;
+  }
 }
 
 .card h3 {
@@ -833,8 +846,17 @@ footer {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  height: 280px;
-  overflow: hidden;
+  /* Fixed size for desktop */
+  height: 435px;
+  width: 450px;
+}
+
+@media (max-width: 820px) {
+  .poster {
+    width: 100%;
+    height: auto;
+    min-height: 250px;
+  }
 }
 
 .btn-poster-shuffle {
