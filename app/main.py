@@ -129,6 +129,20 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Dan Quotes Service", lifespan=lifespan)
 
+# Error handlers ------------------------------------------------------
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc):
+    return RedirectResponse(url="/error", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.exception_handler(500)
+async def internal_error_handler(request: Request, exc):
+    return RedirectResponse(url="/error", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.get("/error", response_class=HTMLResponse)
+async def error_page(request: Request):
+    return templates.TemplateResponse("error.html", {"request": request})
+
+
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 templates.env.globals["settings"] = get_settings()
 static_dir = os.path.join(os.path.dirname(__file__), "static")
