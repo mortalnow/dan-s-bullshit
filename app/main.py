@@ -366,9 +366,12 @@ async def login_form(request: Request):
 
 
 @app.get("/admin/login", response_class=HTMLResponse)
-async def admin_login_form(request: Request):
+async def admin_login_form(request: Request, error: Optional[str] = None):
     settings = get_settings()
-    return templates.TemplateResponse("admin_login.html", {"request": request, "local_mode": settings.local_mode})
+    return templates.TemplateResponse(
+        "admin_login.html", 
+        {"request": request, "local_mode": settings.local_mode, "error": error}
+    )
 
 
 @app.post("/admin/login")
@@ -382,7 +385,10 @@ async def admin_login(
     email_clean = (email or "").strip().lower()
     
     if not email_clean:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required")
+        return RedirectResponse(
+            url="/admin/login?error=EMAIL+IS+REQUIRED", 
+            status_code=status.HTTP_302_FOUND
+        )
     
     # Try .env admins first
     creds = settings.admin_creds
@@ -390,13 +396,22 @@ async def admin_login(
         cookie_value = f"{email_clean}:{token}:admin"
     else:
         # Check database - unified users collection
-        user = await db.get_user_by_email(email_clean, is_admin=False)
-        if not user or user.password != token:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
-        
-        # Use actual role from database
-        role = "admin" if user.is_admin else "user"
-        cookie_value = f"{email_clean}:{token}:{role}"
+        try:
+            user = await db.get_user_by_email(email_clean, is_admin=False)
+            if not user or user.password != token:
+                return RedirectResponse(
+                    url="/admin/login?error=INCORRECT+EMAIL+OR+PASSWORD", 
+                    status_code=status.HTTP_302_FOUND
+                )
+            
+            # Use actual role from database
+            role = "admin" if user.is_admin else "user"
+            cookie_value = f"{email_clean}:{token}:{role}"
+        except (MongoDBError, LocalDBError):
+            return RedirectResponse(
+                url="/admin/login?error=DATABASE+ERROR+OCCURRED", 
+                status_code=status.HTTP_302_FOUND
+            )
 
     resp = RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
     settings = get_settings()
