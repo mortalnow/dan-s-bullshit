@@ -99,6 +99,14 @@ async def lifespan(app: FastAPI):
         return
 
     print(f"🌍 Starting in PRODUCTION MODE. Connecting to MongoDB...")
+    if not settings.mongodb_uri:
+        print("❌ Error: MONGODB_URI is not set. Production mode will fail.")
+        # We still yield to let the app start (so logs can be seen), 
+        # but routes will fail with 500 when accessing DB.
+        app.state.db_client = None
+        yield
+        return
+
     mongo_client = AsyncIOMotorClient(settings.mongodb_uri)
     try:
         store = MongoQuoteStore(

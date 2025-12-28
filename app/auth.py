@@ -156,10 +156,15 @@ async def get_current_admin(
     db: Optional[object] = None,  # Can be passed by dependency in main.py
 ) -> AdminContext:
     token: Optional[str] = None
-    if authorization and authorization.lower().startswith("bearer "):
-        token = authorization.split(" ", 1)[1]
-    elif admin_token:
-        token = admin_token
+    
+    # Handle both manual calls and FastAPI injection
+    auth_str = str(authorization) if authorization and not hasattr(authorization, "default") else None
+    cookie_str = str(admin_token) if admin_token and not hasattr(admin_token, "default") else None
+
+    if auth_str and auth_str.lower().startswith("bearer "):
+        token = auth_str.split(" ", 1)[1]
+    elif cookie_str:
+        token = cookie_str
 
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
@@ -182,10 +187,15 @@ async def get_current_user(
     db: Optional[object] = None,
 ) -> AdminContext:
     token: Optional[str] = None
-    if authorization and authorization.lower().startswith("bearer "):
-        token = authorization.split(" ", 1)[1]
-    elif admin_token:
-        token = admin_token
+
+    # Handle both manual calls and FastAPI injection
+    auth_str = str(authorization) if authorization and not hasattr(authorization, "default") else None
+    cookie_str = str(admin_token) if admin_token and not hasattr(admin_token, "default") else None
+
+    if auth_str and auth_str.lower().startswith("bearer "):
+        token = auth_str.split(" ", 1)[1]
+    elif cookie_str:
+        token = cookie_str
 
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Login required")
