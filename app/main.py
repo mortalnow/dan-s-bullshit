@@ -158,7 +158,12 @@ templates.env.filters["format_datetime"] = format_datetime
 
 # Helpers -------------------------------------------------------------
 def handle_db_error(exc: Exception):
-    raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    # Log the full error but don't expose it to the client in production
+    print(f"❌ Database error: {exc}")
+    settings = get_settings()
+    if settings.local_mode:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+    raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Internal database error")
 
 
 async def get_user(
