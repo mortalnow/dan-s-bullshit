@@ -65,6 +65,28 @@ class MongoQuoteStore:
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc
 
+    @staticmethod
+    def _doc_to_user(doc: dict) -> User:
+        """Convert a MongoDB document to a User object."""
+        created_at = doc.get("created_at")
+        if created_at is None:
+            created_at = datetime.utcnow()
+        elif isinstance(created_at, str):
+            try:
+                # Handle ISO format strings from some drivers/migrations
+                created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            except ValueError:
+                created_at = datetime.utcnow()
+        
+        return User(
+            email=doc["email"],
+            password=doc["password"],
+            admin_name=doc.get("admin_name") or doc.get("name") or doc["email"].split("@")[0],
+            status=doc.get("status", UserStatus.PENDING),
+            is_admin=doc.get("is_admin", False),
+            created_at=created_at,
+        )
+
     # Users (unified - admins and regular users in same collection) ----
     async def get_user_by_email(self, email: str, is_admin: bool = False) -> Optional[User]:
         """Get user by email. If is_admin=True, only return if user is an admin."""
@@ -75,14 +97,7 @@ class MongoQuoteStore:
             doc = await self._user_collection.find_one(query)
             if not doc:
                 return None
-            return User(
-                email=doc["email"],
-                password=doc["password"],
-                admin_name=doc.get("admin_name") or doc.get("name") or doc["email"].split("@")[0],
-                status=doc.get("status", UserStatus.PENDING),
-                is_admin=doc.get("is_admin", False),
-                created_at=doc.get("created_at", datetime.utcnow()),
-            )
+            return self._doc_to_user(doc)
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc
 
@@ -113,14 +128,7 @@ class MongoQuoteStore:
             cursor = self._user_collection.find(query).sort("created_at", -1)
             users = []
             async for doc in cursor:
-                users.append(User(
-                    email=doc["email"],
-                    password=doc["password"],
-                    admin_name=doc.get("admin_name") or doc.get("name") or doc["email"].split("@")[0],
-                    status=doc.get("status", UserStatus.PENDING),
-                    is_admin=doc.get("is_admin", False),
-                    created_at=doc.get("created_at", datetime.utcnow()),
-                ))
+                users.append(self._doc_to_user(doc))
             return users
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc

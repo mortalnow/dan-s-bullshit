@@ -95,6 +95,26 @@ class LocalQuoteStore:
         )
 
     # User methods ------------------------------------------------
+    @staticmethod
+    def _row_to_user(row: sqlite3.Row) -> User:
+        created_at = row["created_at"]
+        if created_at is None:
+            dt = datetime.utcnow()
+        else:
+            try:
+                dt = datetime.fromisoformat(created_at)
+            except (ValueError, TypeError):
+                dt = datetime.utcnow()
+                
+        return User(
+            email=row["email"],
+            password=row["password"],
+            admin_name=row["admin_name"] or row["email"].split("@")[0],
+            status=row["status"],
+            is_admin=bool(row["is_admin"]),
+            created_at=dt,
+        )
+
     async def get_user_by_email(self, email: str, is_admin: bool = False) -> Optional[User]:
         """Get user by email. If is_admin=True, only return if user is an admin."""
         try:
@@ -111,14 +131,7 @@ class LocalQuoteStore:
                     ).fetchone()
                 if not row:
                     return None
-                return User(
-                    email=row["email"],
-                    password=row["password"],
-                    admin_name=row["admin_name"],
-                    status=row["status"],
-                    is_admin=bool(row["is_admin"]),
-                    created_at=datetime.fromisoformat(row["created_at"]),
-                )
+                return self._row_to_user(row)
         except (sqlite3.Error, ValueError) as exc:
             raise LocalDBError(str(exc)) from exc
 
@@ -158,14 +171,7 @@ class LocalQuoteStore:
         try:
             with self._connect() as conn:
                 rows = conn.execute(query, params).fetchall()
-                return [User(
-                    email=r["email"],
-                    password=r["password"],
-                    admin_name=r["admin_name"],
-                    status=r["status"],
-                    is_admin=bool(r["is_admin"]),
-                    created_at=datetime.fromisoformat(r["created_at"]),
-                ) for r in rows]
+                return [self._row_to_user(r) for r in rows]
         except (sqlite3.Error, ValueError) as exc:
             raise LocalDBError(str(exc)) from exc
 
