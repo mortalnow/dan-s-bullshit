@@ -16,7 +16,6 @@ class MongoConfig:
     uri: str
     db: str
     collection: str = "quotes"
-    admin_collection: str = "admins"
     user_collection: str = "users"
 
 
@@ -29,7 +28,6 @@ class MongoQuoteStore:
         self.config = config
         self.client = client
         self._collection: AsyncIOMotorCollection = client[config.db][config.collection]
-        self._admin_collection: AsyncIOMotorCollection = client[config.db][config.admin_collection]
         self._user_collection: AsyncIOMotorCollection = client[config.db][config.user_collection]
 
     # Utilities -----------------------------------------------------
@@ -63,51 +61,55 @@ class MongoQuoteStore:
             await self._collection.create_index("content_hash", unique=True, sparse=True)
             await self._collection.create_index("status")
             await self._collection.create_index([("created_at", -1), ("id", -1)])
-            await self._admin_collection.create_index("email", unique=True)
             await self._user_collection.create_index("email", unique=True)
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc
 
-    # Admin / Users -------------------------------------------------
+    # Users (unified - admins and regular users in same collection) ----
     async def get_user_by_email(self, email: str, is_admin: bool = False) -> Optional[User]:
+        """Get user by email. If is_admin=True, only return if user is an admin."""
         try:
-            coll = self._admin_collection if is_admin else self._user_collection
-            doc = await coll.find_one({"email": email.lower()})
+            query = {"email": email.lower()}
+            if is_admin:
+                query["is_admin"] = True
+            doc = await self._user_collection.find_one(query)
             if not doc:
                 return None
             return User(
                 email=doc["email"],
                 password=doc["password"],
                 admin_name=doc.get("admin_name") or doc.get("name") or doc["email"].split("@")[0],
-                status=doc.get("status", UserStatus.APPROVED if is_admin else UserStatus.PENDING),
-                is_admin=is_admin or doc.get("is_admin", False),
+                status=doc.get("status", UserStatus.PENDING),
+                is_admin=doc.get("is_admin", False),
                 created_at=doc.get("created_at", datetime.utcnow()),
             )
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc
 
     async def create_user(self, user: User) -> User:
+        """Create a new user in the unified users collection."""
         try:
-            coll = self._admin_collection if user.is_admin else self._user_collection
             doc = {
                 "email": user.email.lower(),
                 "password": user.password,
                 "admin_name": user.admin_name,
-                "status": user.status,
+                "status": user.status.value if hasattr(user.status, 'value') else user.status,
                 "is_admin": user.is_admin,
                 "created_at": user.created_at,
             }
-            await coll.insert_one(doc)
+            await self._user_collection.insert_one(doc)
             return user
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc
 
-    async def list_users(self, status: Optional[UserStatus] = None) -> list[User]:
+    async def list_users(self, status: Optional[UserStatus] = None, include_admins: bool = False) -> list[User]:
+        """List users. By default excludes admins (for user moderation)."""
         query = {}
         if status:
-            query["status"] = status
+            query["status"] = status.value if hasattr(status, 'value') else status
+        if not include_admins:
+            query["is_admin"] = {"$ne": True}
         try:
-            # We list only from the users collection for moderation
             cursor = self._user_collection.find(query).sort("created_at", -1)
             users = []
             async for doc in cursor:
@@ -124,26 +126,39 @@ class MongoQuoteStore:
             raise MongoDBError(str(exc)) from exc
 
     async def update_user_status(self, email: str, status: UserStatus) -> bool:
+        """Update user status (for approval/rejection)."""
         try:
-            # Status updates only happen for the users collection
+            status_value = status.value if hasattr(status, 'value') else status
             result = await self._user_collection.update_one(
                 {"email": email.lower()},
-                {"$set": {"status": status}}
+                {"$set": {"status": status_value}}
             )
             return result.modified_count > 0
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc
 
     async def delete_user(self, email: str) -> bool:
+        """Delete a user (for rejecting registration)."""
         try:
-            # Deletion only happens for the users collection (rejecting a registration)
             result = await self._user_collection.delete_one({"email": email.lower()})
             return result.deleted_count > 0
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc
 
     async def get_admin_by_email(self, email: str) -> Optional[User]:
+        """Get an admin user by email."""
         return await self.get_user_by_email(email, is_admin=True)
+
+    async def set_user_admin(self, email: str, is_admin: bool) -> bool:
+        """Set or remove admin privileges for a user."""
+        try:
+            result = await self._user_collection.update_one(
+                {"email": email.lower()},
+                {"$set": {"is_admin": is_admin, "status": UserStatus.APPROVED.value if is_admin else None}}
+            )
+            return result.modified_count > 0
+        except PyMongoError as exc:
+            raise MongoDBError(str(exc)) from exc
 
     # CRUD ----------------------------------------------------------
     async def create_quote(

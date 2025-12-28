@@ -79,9 +79,9 @@ async def lifespan(app: FastAPI):
         print(f"🚀 Starting in LOCAL MODE. Using database: {settings.local_db_path}")
         store = LocalQuoteStore(LocalDBConfig(path=settings.local_db_path))
         
-        # Ensure .env admins exist in DB
+        # Ensure .env admins exist in DB (unified users table)
         for email, password in settings.admin_creds.items():
-            existing = await store.get_user_by_email(email, is_admin=True)
+            existing = await store.get_user_by_email(email, is_admin=False)
             if not existing:
                 await store.create_user(User(
                     email=email,
@@ -90,6 +90,9 @@ async def lifespan(app: FastAPI):
                     status=UserStatus.APPROVED,
                     is_admin=True
                 ))
+            elif not existing.is_admin:
+                # User exists but is not admin - upgrade them
+                await store.set_user_admin(email, True)
         
         app.state.db_client = store
         yield
@@ -108,9 +111,9 @@ async def lifespan(app: FastAPI):
         )
         await store.ensure_indexes()
         
-        # Ensure .env admins exist in DB with is_admin=True and status=APPROVED
+        # Ensure .env admins exist in DB (unified users collection)
         for email, password in settings.admin_creds.items():
-            existing = await store.get_user_by_email(email, is_admin=True)
+            existing = await store.get_user_by_email(email, is_admin=False)
             if not existing:
                 await store.create_user(User(
                     email=email,
@@ -120,8 +123,8 @@ async def lifespan(app: FastAPI):
                     is_admin=True
                 ))
             elif not existing.is_admin:
-                await store.update_user_status(email, UserStatus.APPROVED)
-                # We should have a method to update is_admin but for now we'll skip
+                # User exists but is not admin - upgrade them
+                await store.set_user_admin(email, True)
         
         print(f"✅ Connected to MongoDB: {settings.mongodb_db}")
         app.state.db_client = store
@@ -191,6 +194,7 @@ async def submit_form(
     try:
         # Manually invoke the dependency logic to handle redirection
         user = await get_current_user(
+            authorization=None,
             admin_token=admin_token,
             settings=provide_auth_settings(),
             db=db
@@ -350,21 +354,26 @@ async def admin_login(
 ):
     email_clean = (email or "").strip().lower()
     
+    if not email_clean:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required")
+    
     # Try .env admins first if logging in as admin
     creds = settings.admin_creds
     if as_admin and email_clean in creds and token == creds[email_clean]:
         cookie_value = f"{email_clean}:{token}:admin"
     else:
-        # Check database for both users and admins
-        if not email_clean:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required")
-        
-        user = await db.get_user_by_email(email_clean, is_admin=as_admin)
-        if user and user.password == token:
-            role = "admin" if as_admin else "user"
-            cookie_value = f"{email_clean}:{token}:{role}"
-        else:
+        # Check database - unified users collection
+        user = await db.get_user_by_email(email_clean, is_admin=False)
+        if not user or user.password != token:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        
+        # If trying to login as admin but user is not admin, reject
+        if as_admin and not user.is_admin:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an admin")
+        
+        # Use actual role from database
+        role = "admin" if user.is_admin else "user"
+        cookie_value = f"{email_clean}:{token}:{role}"
 
     resp = RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
     resp.set_cookie(key="admin_token", value=cookie_value, httponly=True, samesite="lax")

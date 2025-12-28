@@ -96,9 +96,19 @@ class LocalQuoteStore:
 
     # User methods ------------------------------------------------
     async def get_user_by_email(self, email: str, is_admin: bool = False) -> Optional[User]:
+        """Get user by email. If is_admin=True, only return if user is an admin."""
         try:
             with self._connect() as conn:
-                row = conn.execute("SELECT * FROM users WHERE email = ? LIMIT 1", (email.lower(),)).fetchone()
+                if is_admin:
+                    row = conn.execute(
+                        "SELECT * FROM users WHERE email = ? AND is_admin = 1 LIMIT 1", 
+                        (email.lower(),)
+                    ).fetchone()
+                else:
+                    row = conn.execute(
+                        "SELECT * FROM users WHERE email = ? LIMIT 1", 
+                        (email.lower(),)
+                    ).fetchone()
                 if not row:
                     return None
                 return User(
@@ -113,27 +123,38 @@ class LocalQuoteStore:
             raise LocalDBError(str(exc)) from exc
 
     async def create_user(self, user: User) -> User:
+        """Create a new user in the unified users table."""
         try:
+            status_value = user.status.value if hasattr(user.status, 'value') else user.status
             with self._connect() as conn:
                 conn.execute(
                     """
                     INSERT INTO users (email, password, admin_name, status, is_admin, created_at)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (user.email.lower(), user.password, user.admin_name, user.status, 1 if user.is_admin else 0, user.created_at.isoformat()),
+                    (user.email.lower(), user.password, user.admin_name, status_value, 1 if user.is_admin else 0, user.created_at.isoformat()),
                 )
                 conn.commit()
                 return user
         except sqlite3.Error as exc:
             raise LocalDBError(str(exc)) from exc
 
-    async def list_users(self, status: Optional[UserStatus] = None) -> list[User]:
-        query = "SELECT * FROM users"
+    async def list_users(self, status: Optional[UserStatus] = None, include_admins: bool = False) -> list[User]:
+        """List users. By default excludes admins (for user moderation)."""
+        conditions = []
         params = []
         if status:
-            query += " WHERE status = ?"
-            params.append(status)
+            status_value = status.value if hasattr(status, 'value') else status
+            conditions.append("status = ?")
+            params.append(status_value)
+        if not include_admins:
+            conditions.append("is_admin = 0")
+        
+        query = "SELECT * FROM users"
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
         query += " ORDER BY created_at DESC"
+        
         try:
             with self._connect() as conn:
                 rows = conn.execute(query, params).fetchall()
@@ -149,12 +170,34 @@ class LocalQuoteStore:
             raise LocalDBError(str(exc)) from exc
 
     async def update_user_status(self, email: str, status: UserStatus) -> bool:
+        """Update user status (for approval/rejection)."""
         try:
+            status_value = status.value if hasattr(status, 'value') else status
             with self._connect() as conn:
                 updated = conn.execute(
                     "UPDATE users SET status = ? WHERE email = ?",
-                    (status, email.lower()),
+                    (status_value, email.lower()),
                 ).rowcount
+                conn.commit()
+                return updated > 0
+        except sqlite3.Error as exc:
+            raise LocalDBError(str(exc)) from exc
+
+    async def set_user_admin(self, email: str, is_admin: bool) -> bool:
+        """Set or remove admin privileges for a user."""
+        try:
+            with self._connect() as conn:
+                if is_admin:
+                    # Also set status to APPROVED when making admin
+                    updated = conn.execute(
+                        "UPDATE users SET is_admin = ?, status = ? WHERE email = ?",
+                        (1, UserStatus.APPROVED.value, email.lower()),
+                    ).rowcount
+                else:
+                    updated = conn.execute(
+                        "UPDATE users SET is_admin = ? WHERE email = ?",
+                        (0, email.lower()),
+                    ).rowcount
                 conn.commit()
                 return updated > 0
         except sqlite3.Error as exc:

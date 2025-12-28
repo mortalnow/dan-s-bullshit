@@ -105,15 +105,20 @@ async def verify_token(
             email = settings.admin_emails[0] if settings.admin_emails else "local-admin"
             return {"email": email, "name": settings.admin_name, "is_admin": True, "status": "APPROVED"}
 
-    # Database Check (handles both admins and users depending on role suffix)
+    # Database Check - look up user in unified collection
     if db and hasattr(db, "get_user_by_email"):
         if ":" in original_token:
             parts = original_token.split(":")
             if len(parts) == 3:
                 email, password, role = parts
-                user = await db.get_user_by_email(email, is_admin=(role == "admin"))
+                # First try to find the user (don't filter by is_admin, check after)
+                user = await db.get_user_by_email(email, is_admin=False)
+                # If looking for admin but user exists and is not admin, reject
                 if user and user.password == password:
-                    return {"email": user.email, "name": user.admin_name, "is_admin": user.is_admin, "status": user.status}
+                    if role == "admin" and not user.is_admin:
+                        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an admin")
+                    status_value = user.status.value if hasattr(user.status, 'value') else user.status
+                    return {"email": user.email, "name": user.admin_name, "is_admin": user.is_admin, "status": status_value}
 
     # Production Mode Logic (JWT)
     if settings.jwks_url:
