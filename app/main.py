@@ -167,6 +167,21 @@ def handle_db_error(exc: Exception):
     raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
 
 
+async def get_user(
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+    admin_token: Optional[str] = Cookie(default=None, alias="admin_token"),
+    settings: AuthSettings = Depends(provide_auth_settings),
+    db: QuoteStore = Depends(get_db_client),
+) -> AdminContext:
+    """A wrapper for get_current_user that ensures the DB client is passed."""
+    return await get_current_user(
+        authorization=authorization,
+        admin_token=admin_token,
+        settings=settings,
+        db=db
+    )
+
+
 # Web routes ----------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, db: QuoteStore = Depends(get_db_client)):
@@ -214,7 +229,7 @@ async def submit_quote_form(
     submitted_by: str = Form(...),
     source: str = Form("web_form"),
     db: QuoteStore = Depends(get_db_client),
-    user: AdminContext = Depends(get_current_user),
+    user: AdminContext = Depends(get_user),
 ):
     content_clean = content.strip()
     submitted_by_clean = submitted_by.strip()
