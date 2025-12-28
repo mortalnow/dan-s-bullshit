@@ -109,26 +109,8 @@ async def lifespan(app: FastAPI):
             ),
             mongo_client,
         )
-        await store.ensure_indexes()
-        
-        # Ensure .env admins exist in DB (unified users collection)
-        # Wrapped in try-except to prevent startup crashes on serverless
-        try:
-            for email, password in settings.admin_creds.items():
-                existing = await store.get_user_by_email(email, is_admin=False)
-                if not existing:
-                    await store.create_user(User(
-                        email=email,
-                        password=password,
-                        admin_name=settings.admin_name,
-                        status=UserStatus.APPROVED,
-                        is_admin=True
-                    ))
-                elif not existing.is_admin:
-                    # User exists but is not admin - upgrade them
-                    await store.set_user_admin(email, True)
-        except Exception as e:
-            print(f"⚠️ Warning: Could not sync admins on startup: {e}")
+        # We skip ensure_indexes() and admin sync here because they are slow 
+        # and should be handled by migration/deployment scripts, not every cold start.
         
         print(f"✅ Connected to MongoDB: {settings.mongodb_db}")
         app.state.db_client = store
