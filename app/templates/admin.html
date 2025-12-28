@@ -25,7 +25,7 @@
     <div class="card">
       <h3>Welcome!</h3>
       <p>Your account is approved. You can now <a href="/submit" class="pill acid">Submit new quotes</a> to the dispenser.</p>
-      <p class="hint" style="margin-top: 10px;">Only administrators can view the full moderation archive and user list.</p>
+      <p class="hint" style="margin-top: 10px;">Below are your submitted quotes and their status. If a quote is rejected, you can edit and resubmit it.</p>
     </div>
   {% elif mode == 'users' %}
   {% if users %}
@@ -81,30 +81,35 @@
   {% if quotes %}
   {% for q in quotes %}
   <article class="card">
+    {% if is_admin %}
     <form method="post" action="/admin/update/{{ q.id }}?mode={{ mode }}">
-      <textarea name="content" class="quote admin-textarea"
-        {% if not is_admin %}readonly{% endif %}
-        rows="2">{{ q.content }}</textarea>
+      <textarea name="content" class="quote admin-textarea" rows="2">{{ q.content }}</textarea>
       <div class="quote-meta">
-        <span class="pill {% if q.status == 'PENDING' %}hot{% elif q.status == 'APPROVED' %}acid{% endif %}">{{ q.status
-          }}</span>
-        <span class="pill">by: 
-          {% if is_admin %}
-            <input name="submitted_by" value="{{ q.submitted_by }}" class="admin-inline-input" />
-          {% else %}
-            {{ q.submitted_by }}
-          {% endif %}
-        </span>
+        <span class="pill {% if q.status == 'PENDING' %}hot{% elif q.status == 'APPROVED' %}acid{% endif %}">{{ q.status }}</span>
+        <span class="pill">by: <input name="submitted_by" value="{{ q.submitted_by }}" class="admin-inline-input" /></span>
         {% if q.created_at %}<span class="pill">at: {{ q.created_at|format_datetime }}</span>{% endif %}
       </div>
-          <div class="actions">
-            {% if is_admin %}
-              <button class="btn primary" type="submit" name="action" value="approve">Approve</button>
-              <button class="btn danger" type="submit" name="action" value="reject">Reject</button>
-              <button class="btn alt" type="submit" name="action" value="edit">Edit</button>
-            {% endif %}
-          </div>
+      <div class="actions">
+        <button class="btn primary" type="submit" name="action" value="approve">Approve</button>
+        <button class="btn danger" type="submit" name="action" value="reject">Reject</button>
+        <button class="btn alt" type="submit" name="action" value="edit">Edit</button>
+      </div>
     </form>
+    {% else %}
+    <form method="post" action="/admin/resubmit/{{ q.id }}">
+      <textarea name="content" class="quote admin-textarea" {% if q.status != 'REJECTED' %}readonly{% endif %} rows="2">{{ q.content }}</textarea>
+      <div class="quote-meta">
+        <span class="pill {% if q.status == 'PENDING' %}hot{% elif q.status == 'APPROVED' %}acid{% else %}danger{% endif %}">{{ q.status }}</span>
+        <span class="pill">by: {{ q.submitted_by }}</span>
+        {% if q.created_at %}<span class="pill">at: {{ q.created_at|format_datetime }}</span>{% endif %}
+      </div>
+      {% if q.status == 'REJECTED' %}
+      <div class="actions">
+        <button class="btn primary" type="submit">Resubmit</button>
+      </div>
+      {% endif %}
+    </form>
+    {% endif %}
   </article>
   {% endfor %}
   {% else %}

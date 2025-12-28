@@ -313,8 +313,8 @@ async def admin_queue(
             quotes = await db.list_quotes(status="PENDING", limit=100)
             users = []
         else:
-            # Regular user or invalid mode: no lists
-            quotes = QuoteListResponse(items=[], next_cursor=None)
+            # Regular user: show their own submissions
+            quotes = await db.list_quotes(submitted_by=admin.email, limit=100)
             users = []
     except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
@@ -602,6 +602,39 @@ async def admin_update_web(
     # Preserve the current mode after redirect
     mode = request.query_params.get("mode", "moderation")
     return RedirectResponse(url=f"/admin?mode={mode}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/admin/resubmit/{quote_id}")
+async def admin_resubmit_web(
+    request: Request,
+    quote_id: str,
+    content: str = Form(...),
+    user: AdminContext = Depends(get_user),
+    db: QuoteStore = Depends(get_db_client),
+):
+    try:
+        quote = await db.get_quote(quote_id)
+        if not quote:
+            raise HTTPException(status_code=404, detail="Quote not found")
+        
+        # Security check: User can only resubmit their own quotes
+        if quote.submitted_by != user.email:
+            raise HTTPException(status_code=403, detail="You can only resubmit your own quotes")
+        
+        # Only allow resubmitting if it was rejected
+        if quote.status != "REJECTED":
+            raise HTTPException(status_code=400, detail="Only rejected quotes can be resubmitted")
+
+        await db.update_quote(
+            quote_id, 
+            content=content.strip(), 
+            status="PENDING",
+            verified_by=None # Reset verification
+        )
+    except (MongoDBError, LocalDBError) as exc:
+        handle_db_error(exc)
+    
+    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.post("/admin/bulk-update")

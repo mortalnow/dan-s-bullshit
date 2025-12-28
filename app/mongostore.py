@@ -222,6 +222,7 @@ class MongoQuoteStore:
         limit: int = 20,
         cursor: Optional[str] = None,
         content_hash: Optional[str] = None,
+        submitted_by: Optional[str] = None,
     ) -> QuoteListResponse:
         try:
             offset = int(cursor) if cursor else 0
@@ -233,6 +234,8 @@ class MongoQuoteStore:
             query["status"] = status
         if content_hash:
             query["content_hash"] = content_hash
+        if submitted_by:
+            query["submitted_by"] = submitted_by
 
         try:
             cursor_obj = (

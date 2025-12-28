@@ -92,6 +92,7 @@ class InstantDBClient:
         limit: int = 20,
         cursor: Optional[str] = None,
         content_hash: Optional[str] = None,
+        submitted_by: Optional[str] = None,
     ) -> QuoteListResponse:
         params: Dict[str, Any] = {"limit": limit}
         if status:
@@ -100,6 +101,8 @@ class InstantDBClient:
             params["cursor"] = cursor
         if content_hash:
             params["content_hash"] = content_hash
+        if submitted_by:
+            params["submitted_by"] = submitted_by
         url = self._url(self.config.formatted_quotes_path())
         resp = await self.http.get(url, headers=self._headers(), params=params, timeout=10)
         if resp.status_code >= 300:

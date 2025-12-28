@@ -15,6 +15,7 @@
   --pink: #ff33d6;
   --blue: #245bff;
   --hot: #ff2d2d;
+  --danger: #ff2d2d;
 
   /* Mobile-specific variables */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -579,6 +580,11 @@ main {
 
 .pill.acid {
   background: var(--acid);
+}
+
+.pill.danger {
+  background: var(--danger, #ff4d4d);
+  color: #fff;
 }
 
 @media (max-width: 600px) {

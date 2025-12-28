@@ -281,6 +281,7 @@ class LocalQuoteStore:
         limit: int = 20,
         cursor: Optional[str] = None,
         content_hash: Optional[str] = None,
+        submitted_by: Optional[str] = None,
     ) -> QuoteListResponse:
         try:
             offset = int(cursor) if cursor else 0
@@ -295,6 +296,9 @@ class LocalQuoteStore:
         if content_hash:
             where.append("content_hash = ?")
             params.append(content_hash)
+        if submitted_by:
+            where.append("submitted_by = ?")
+            params.append(submitted_by)
         where_sql = f"WHERE {' AND '.join(where)}" if where else ""
         params.extend([limit, offset])
 
