@@ -385,7 +385,14 @@ async def admin_login(
         cookie_value = f"{email_clean}:{token}:{role}"
 
     resp = RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
-    resp.set_cookie(key="admin_token", value=cookie_value, httponly=True, samesite="lax")
+    settings = get_settings()
+    resp.set_cookie(
+        key="admin_token", 
+        value=cookie_value, 
+        httponly=True, 
+        samesite="lax",
+        secure=not settings.local_mode
+    )
     return resp
 
 

@@ -47,6 +47,35 @@ class TestUserFlow:
         self.user_session = requests.Session()
         self.submitted_quote_id = None
 
+    def pre_cleanup(self):
+        """Clean up any leftover test data from previous runs."""
+        print("🧹 Performing pre-test cleanup...")
+        
+        # Login admin first to be able to cleanup
+        if not self.test_admin_login(silent=True):
+            print("  ⚠️  Could not login as admin for pre-cleanup. Skipping.")
+            return
+
+        try:
+            # Check for any users starting with TEST_USER_PREFIX
+            response = self.admin_session.get(f"{self.base_url}/admin?mode=users")
+            if response.status_code == 200:
+                import re
+                # Find all emails starting with testuser_ and ending with @test.com
+                pattern = f"{TEST_USER_PREFIX}[a-z0-9]+@test\\.com"
+                found_emails = re.findall(pattern, response.text)
+                
+                unique_emails = list(set(found_emails))
+                if unique_emails:
+                    print(f"  🔍 Found {len(unique_emails)} leftover test users. Cleaning up...")
+                    for email in unique_emails:
+                        self.admin_session.post(f"{self.base_url}/admin/users/{email}/reject")
+                    print("  ✅ Pre-test cleanup finished.")
+                else:
+                    print("  ✅ No leftover test users found.")
+        except Exception as e:
+            print(f"  ⚠️  Error during pre-cleanup: {e}")
+
     def run_all_tests(self) -> bool:
         """Run all tests in sequence."""
         print("=" * 60)
@@ -55,6 +84,10 @@ class TestUserFlow:
         print(f"Base URL: {self.base_url}")
         print(f"Test User: {self.test_user_email}")
         print(f"Admin: {self.admin_email}")
+        print()
+
+        # Perform pre-cleanup
+        self.pre_cleanup()
         print()
 
         try:
@@ -129,10 +162,11 @@ class TestUserFlow:
             print(f"     Response: {response.text[:200]}")
             return False
 
-    def test_admin_login(self) -> bool:
+    def test_admin_login(self, silent: bool = False) -> bool:
         """Test 2: Admin can login."""
-        print("\n🔐 Test 2: Admin Login")
-        print("-" * 40)
+        if not silent:
+            print("\n🔐 Test 2: Admin Login")
+            print("-" * 40)
 
         response = self.admin_session.post(
             f"{self.base_url}/admin/login",
@@ -145,11 +179,13 @@ class TestUserFlow:
         )
 
         if response.status_code == 302:  # Redirect to /admin
-            print(f"  ✅ Admin logged in successfully: {self.admin_email}")
+            if not silent:
+                print(f"  ✅ Admin logged in successfully: {self.admin_email}")
             return True
         else:
-            print(f"  ❌ Admin login failed: {response.status_code}")
-            print(f"     Response: {response.text[:200]}")
+            if not silent:
+                print(f"  ❌ Admin login failed: {response.status_code}")
+                print(f"     Response: {response.text[:200]}")
             return False
 
     def test_admin_approves_user(self) -> bool:
