@@ -290,6 +290,24 @@ class MongoQuoteStore:
         except PyMongoError as exc:
             raise MongoDBError(str(exc)) from exc
 
+    async def bulk_update_status(
+        self,
+        status: QuoteStatus,
+        verified_by: Optional[str] = None,
+        target_status: Optional[QuoteStatus] = "PENDING",
+    ) -> int:
+        """Update status for all quotes with a specific target_status (default: PENDING)."""
+        verified_at = self._now_iso() if status in ("APPROVED", "REJECTED") else None
+        try:
+            query = {"status": target_status}
+            result = await self._collection.update_many(
+                query,
+                {"$set": {"status": status, "verified_by": verified_by, "verified_at": verified_at}},
+            )
+            return result.modified_count
+        except PyMongoError as exc:
+            raise MongoDBError(str(exc)) from exc
+
     async def random_approved(self) -> Optional[QuoteResponse]:
         try:
             docs = await self._collection.aggregate(

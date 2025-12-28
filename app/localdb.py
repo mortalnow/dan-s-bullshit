@@ -402,6 +402,26 @@ class LocalQuoteStore:
         except sqlite3.Error as exc:
             raise LocalDBError(str(exc)) from exc
 
+    async def bulk_update_status(
+        self,
+        status: QuoteStatus,
+        verified_by: Optional[str] = None,
+        target_status: Optional[QuoteStatus] = "PENDING",
+    ) -> int:
+        """Update status for all quotes with a specific target_status (default: PENDING)."""
+        verified_at = self._now_iso() if status in ("APPROVED", "REJECTED") else None
+        try:
+            with self._connect() as conn:
+                result = conn.execute(
+                    "UPDATE quotes SET status = ?, verified_by = ?, verified_at = ? WHERE status = ?",
+                    (status, verified_by, verified_at, target_status),
+                )
+                count = result.rowcount
+                conn.commit()
+                return count
+        except sqlite3.Error as exc:
+            raise LocalDBError(str(exc)) from exc
+
     async def latest_quote(self, status: Optional[QuoteStatus] = None) -> Optional[QuoteResponse]:
         try:
             with self._connect() as conn:

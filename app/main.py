@@ -604,6 +604,33 @@ async def admin_update_web(
     return RedirectResponse(url=f"/admin?mode={mode}", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@app.post("/admin/bulk-update")
+async def admin_bulk_update(
+    request: Request,
+    action: str = Form(...),
+    admin: AdminContext = Depends(get_admin),
+    db: QuoteStore = Depends(get_db_client),
+):
+    status_update = None
+    if action == "approve_all":
+        status_update = "APPROVED"
+    elif action == "reject_all":
+        status_update = "REJECTED"
+    
+    if status_update:
+        try:
+            await db.bulk_update_status(
+                status_update,
+                verified_by=admin.email,
+                target_status="PENDING"
+            )
+        except (MongoDBError, LocalDBError) as exc:
+            handle_db_error(exc)
+    
+    mode = request.query_params.get("mode", "moderation")
+    return RedirectResponse(url=f"/admin?mode={mode}", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @app.post("/admin/approve/{quote_id}")
 async def admin_approve_web(
     request: Request,

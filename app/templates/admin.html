@@ -65,6 +65,19 @@
   </div>
   {% endif %}
   {% else %}
+  
+  {% if quotes and mode == 'moderation' %}
+    <article class="card bulk-actions-card">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+        <h3 style="margin: 0;">Bulk Actions ({{ quotes|length }} pending)</h3>
+        <form method="post" action="/admin/bulk-update?mode={{ mode }}" style="display: flex; gap: 10px;">
+          <button class="btn primary" type="submit" name="action" value="approve_all">Approve All</button>
+          <button class="btn danger" type="submit" name="action" value="reject_all">Reject All</button>
+        </form>
+      </div>
+    </article>
+  {% endif %}
+
   {% if quotes %}
   {% for q in quotes %}
   <article class="card">
@@ -85,7 +98,7 @@
         {% if q.created_at %}<span class="pill">at: {{ q.created_at|format_datetime }}</span>{% endif %}
       </div>
           <div class="actions">
-            {% if is_admin and loop.last %}
+            {% if is_admin %}
               <button class="btn primary" type="submit" name="action" value="approve">Approve</button>
               <button class="btn danger" type="submit" name="action" value="reject">Reject</button>
               <button class="btn alt" type="submit" name="action" value="edit">Edit</button>
