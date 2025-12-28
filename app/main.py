@@ -362,7 +362,6 @@ async def admin_login(
     request: Request,
     email: Optional[str] = Form(None),
     token: str = Form(...),
-    as_admin: bool = Form(False),
     settings: Settings = Depends(get_settings),
     db: QuoteStore = Depends(get_db_client),
 ):
@@ -371,19 +370,15 @@ async def admin_login(
     if not email_clean:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required")
     
-    # Try .env admins first if logging in as admin
+    # Try .env admins first
     creds = settings.admin_creds
-    if as_admin and email_clean in creds and token == creds[email_clean]:
+    if email_clean in creds and token == creds[email_clean]:
         cookie_value = f"{email_clean}:{token}:admin"
     else:
         # Check database - unified users collection
         user = await db.get_user_by_email(email_clean, is_admin=False)
         if not user or user.password != token:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
-        
-        # If trying to login as admin but user is not admin, reject
-        if as_admin and not user.is_admin:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an admin")
         
         # Use actual role from database
         role = "admin" if user.is_admin else "user"

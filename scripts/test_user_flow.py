@@ -173,7 +173,6 @@ class TestUserFlow:
             data={
                 "email": self.admin_email,
                 "token": self.admin_password,
-                "as_admin": "true",
             },
             allow_redirects=False,
         )
@@ -232,7 +231,6 @@ class TestUserFlow:
             data={
                 "email": self.test_user_email,
                 "token": self.test_user_password,
-                "as_admin": "",  # Not logging in as admin
             },
             allow_redirects=False,
         )
