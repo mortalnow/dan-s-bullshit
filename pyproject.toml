@@ -1,7 +1,7 @@
 [project]
 name = "dan-quotes-service"
 version = "0.1.0"
-description = "FastAPI backend + minimal web UI for submitting and moderating Dan quotes, backed by InstantDB."
+description = "FastAPI backend + minimal web UI for submitting and moderating Dan quotes."
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [

@@ -38,14 +38,13 @@ class AuthSettings:
 
 
 def build_auth_settings(env: dict) -> AuthSettings:
-    jwks_url = env.get("INSTANTDB_JWKS_URL") or env.get("INSTANTDB_TOKEN_VERIFY_URL")
     admin_emails = (env.get(ADMIN_EMAILS_ENV) or "").split(",")
     local_raw = (env.get(LOCAL_MODE_ENV) or "").strip().lower()
     local_mode = local_raw in ("1", "true", "yes", "on")
     admin_password = env.get(ADMIN_PASSWORD_ENV)
     admin_name = env.get("ADMIN_NAME", "Qiao")
     return AuthSettings(
-        jwks_url=jwks_url,
+        jwks_url=None,
         admin_emails=admin_emails,
         local_mode=local_mode,
         admin_password=admin_password,
@@ -139,8 +138,6 @@ async def verify_token(
 
 def provide_auth_settings() -> AuthSettings:
     env = {
-        "INSTANTDB_JWKS_URL": os.getenv("INSTANTDB_JWKS_URL"),
-        "INSTANTDB_TOKEN_VERIFY_URL": os.getenv("INSTANTDB_TOKEN_VERIFY_URL"),
         "ADMIN_EMAILS": os.getenv("ADMIN_EMAILS", ""),
         "LOCAL_MODE": os.getenv("LOCAL_MODE", ""),
         "ADMIN_PASSWORD": os.getenv("ADMIN_PASSWORD"),

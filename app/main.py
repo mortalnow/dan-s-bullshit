@@ -24,8 +24,6 @@ class Settings(BaseModel):
     mongodb_uri: Optional[str] = Field(default=None, alias="MONGODB_URI")
     mongodb_db: str = Field(default="dans-bullshit", alias="MONGODB_DB")
     mongodb_collection: str = Field(default="quotes", alias="MONGODB_COLLECTION")
-    instantdb_jwks_url: Optional[str] = Field(default=None, alias="INSTANTDB_JWKS_URL")
-    instantdb_token_verify_url: Optional[str] = Field(default=None, alias="INSTANTDB_TOKEN_VERIFY_URL")
     admin_emails_raw: str = Field(default="", alias="ADMIN_EMAILS")
     admin_password: Optional[str] = Field(default=None, alias="ADMIN_PASSWORD")
     admin_name: str = Field(default="Admin", alias="ADMIN_NAME")

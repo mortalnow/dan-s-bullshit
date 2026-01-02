@@ -227,9 +227,8 @@ class LocalQuoteStore:
     # API-compatible methods --------------------------------------
     @staticmethod
     def content_hash(content: str) -> str:
-        from .instantdb import InstantDBClient
-
-        return InstantDBClient.content_hash(content)
+        import hashlib
+        return hashlib.sha256(content.strip().encode("utf-8")).hexdigest()
 
     async def create_quote(
         self,
