@@ -24,8 +24,8 @@ A FastAPI-based quote submission and moderation system with a modern, minimal we
   - Unified login for both administrators and regular users.
   - Role-based access control (Admins vs. Users).
   - Secure session management using HTTP-only cookies.
-- **Dual Database Support**: 
-  - **MongoDB Atlas**: Manages `quotes`, `users`, and `admins` collections for production.
+- **Dual Database Support**:
+  - **MongoDB Atlas**: Manages `quotes` and `users` collections for production.
   - **SQLite**: Local development mode with full feature parity.
 
 ## Project Structure
@@ -41,8 +41,10 @@ A FastAPI-based quote submission and moderation system with a modern, minimal we
 │   ├── templates/           # Jinja2 HTML templates
 │   └── static/              # CSS and images
 ├── scripts/
-│   ├── import_records.py    # Seed quotes from records.txt
-│   └── add_admin.py         # Utility to add admin accounts
+│   ├── test_user_flow.py    # End-to-end test for user registration and quote submission
+│   ├── check_prod_users.py  # List users from MongoDB production database
+│   ├── compare_dbs.py       # Compare quotes/users between MongoDB and SQLite
+│   └── reset_likes.py       # Reset all like counts to 0 in both databases
 ├── requirements.txt         # Python dependencies
 └── README.md               # This file
 ```
