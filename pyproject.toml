@@ -18,3 +18,8 @@ dependencies = [
   "pytest-asyncio==0.24.0",
   "requests>=2.32.5",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra -q"

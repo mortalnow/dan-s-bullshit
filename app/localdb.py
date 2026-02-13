@@ -28,12 +28,6 @@ class LocalQuoteStore:
 
     def _init_schema(self) -> None:
         with self._connect() as conn:
-            # Check if likes column exists, if not add it
-            cursor = conn.execute("PRAGMA table_info(quotes)")
-            columns = [row[1] for row in cursor.fetchall()]
-            if "likes" not in columns:
-                conn.execute("ALTER TABLE quotes ADD COLUMN likes INTEGER DEFAULT 0")
-            
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS quotes (
@@ -50,6 +44,11 @@ class LocalQuoteStore:
                 )
                 """
             )
+            # Check if likes column exists, if not add it (migration for older DBs)
+            cursor = conn.execute("PRAGMA table_info(quotes)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if "likes" not in columns:
+                conn.execute("ALTER TABLE quotes ADD COLUMN likes INTEGER DEFAULT 0")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_quotes_content_hash ON quotes(content_hash)")
             conn.execute(

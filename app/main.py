@@ -496,17 +496,6 @@ async def api_like_quote(quote_id: str, db: QuoteStore = Depends(get_db_client))
         handle_db_error(exc)
 
 
-@app.get("/api/quotes/{quote_id}", response_model=QuoteResponse)
-async def api_get_quote(quote_id: str, db: QuoteStore = Depends(get_db_client)):
-    try:
-        quote = await db.get_quote(quote_id)
-    except (MongoDBError, LocalDBError) as exc:
-        handle_db_error(exc)
-    if not quote or quote.status != "APPROVED":
-        raise HTTPException(status_code=404, detail="Quote not found")
-    return quote
-
-
 @app.get("/api/quotes/latest", response_model=Optional[QuoteResponse])
 async def api_latest_quote(
     status_param: str = Query(default=None, alias="status"),
@@ -517,6 +506,17 @@ async def api_latest_quote(
         return await db.latest_quote(status=status_normalized)
     except (MongoDBError, LocalDBError) as exc:
         handle_db_error(exc)
+
+
+@app.get("/api/quotes/{quote_id}", response_model=QuoteResponse)
+async def api_get_quote(quote_id: str, db: QuoteStore = Depends(get_db_client)):
+    try:
+        quote = await db.get_quote(quote_id)
+    except (MongoDBError, LocalDBError) as exc:
+        handle_db_error(exc)
+    if not quote or quote.status != "APPROVED":
+        raise HTTPException(status_code=404, detail="Quote not found")
+    return quote
 
 
 @app.post("/api/quotes", response_model=QuoteResponse, status_code=status.HTTP_201_CREATED)
