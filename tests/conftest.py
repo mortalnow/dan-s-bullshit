@@ -59,7 +59,7 @@ async def seeded_db(db):
 
 
 @pytest.fixture
-def client(seeded_db, monkeypatch):
+def client(seeded_db, monkeypatch, tmp_path):
     """TestClient with dependency overrides for the seeded DB."""
     test_db = seeded_db["db"]
 
@@ -68,6 +68,8 @@ def client(seeded_db, monkeypatch):
     monkeypatch.setenv("ADMIN_EMAILS", "admin@test.com")
     monkeypatch.setenv("ADMIN_PASSWORD", "admin-pass")
     monkeypatch.setenv("LOCAL_MODE", "true")
+    # Point lifespan's LocalQuoteStore at a temp file so it doesn't touch real local.db
+    monkeypatch.setenv("LOCAL_DB_PATH", str(tmp_path / "lifespan.db"))
 
     # Clear lru_cache so Settings picks up our env
     get_settings.cache_clear()

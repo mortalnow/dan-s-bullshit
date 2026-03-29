@@ -47,16 +47,26 @@ class TestApiGetQuote:
 
 
 class TestApiLatestQuote:
-    def test_returns_latest(self, client, seeded_db):
+    def test_default_returns_approved_only(self, client, seeded_db):
         r = client.get("/api/quotes/latest")
         assert r.status_code == 200
+        data = r.json()
+        if data:
+            assert data["status"] == "APPROVED"
 
-    def test_status_filter(self, client, seeded_db):
+    def test_status_filter_approved(self, client, seeded_db):
         r = client.get("/api/quotes/latest?status=APPROVED")
         assert r.status_code == 200
         data = r.json()
         if data:
             assert data["status"] == "APPROVED"
+
+    def test_explicit_pending_filter(self, client, seeded_db):
+        r = client.get("/api/quotes/latest?status=PENDING")
+        assert r.status_code == 200
+        data = r.json()
+        if data:
+            assert data["status"] == "PENDING"
 
 
 class TestApiCreateQuote:

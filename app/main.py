@@ -498,7 +498,7 @@ async def api_like_quote(quote_id: str, db: QuoteStore = Depends(get_db_client))
 
 @app.get("/api/quotes/latest", response_model=Optional[QuoteResponse])
 async def api_latest_quote(
-    status_param: str = Query(default=None, alias="status"),
+    status_param: str = Query(default="APPROVED", alias="status"),
     db: QuoteStore = Depends(get_db_client),
 ):
     status_normalized = status_param.upper() if status_param else None
